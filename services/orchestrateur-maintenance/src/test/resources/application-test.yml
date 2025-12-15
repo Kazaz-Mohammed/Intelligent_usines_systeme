@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: orchestrateur-maintenance-service-test
+  
+  # Database (H2 pour les tests)
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  # Kafka (mock pour les tests)
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: test-group
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Orchestrateur Configuration
+orchestrateur:
+  maintenance:
+    kafka:
+      topic-anomalies: anomalies-detected
+      topic-rul-predictions: rul-predictions
+      topic-work-orders: work-orders
+      topic-maintenance-plans: maintenance-plans
+    optimization:
+      enabled: true
+    constraints:
+      min-time-between-interventions-hours: 2
+      safety-constraints-enabled: true
+    sla:
+      critical-response-hours: 1
+      high-priority-response-hours: 4
+      medium-priority-response-hours: 24
+      low-priority-response-hours: 72
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.predictivemaintenance.orchestrateur: DEBUG
+

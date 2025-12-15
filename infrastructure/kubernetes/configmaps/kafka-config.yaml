@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: predictive-maintenance
+data:
+  bootstrap-servers: "kafka-service:9092"
+  zookeeper-connect: "zookeeper-service:2181"
+  auto-offset-reset: "earliest"
+  enable-auto-commit: "true"
+

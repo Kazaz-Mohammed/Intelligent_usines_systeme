@@ -1,0 +1,48 @@
+# Docker Compose pour le service Extraction Features (développement local)
+services:
+  extraction-features-service:
+    build: .
+    container_name: extraction-features-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVICE_NAME=extraction-features-service
+      - SERVICE_PORT=8083
+      - LOG_LEVEL=INFO
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONSUMER_GROUP=extraction-features-service
+      - KAFKA_TOPIC_INPUT_PREPROCESSED=preprocessed-data
+      - KAFKA_TOPIC_INPUT_WINDOWED=windowed-data
+      - KAFKA_TOPIC_OUTPUT=extracted-features
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=predictive_maintenance
+      - DATABASE_USER=pmuser
+      - DATABASE_PASSWORD=pmpassword
+      - ENABLE_TEMPORAL_FEATURES=true
+      - ENABLE_FREQUENCY_FEATURES=true
+      - ENABLE_WAVELET_FEATURES=true
+      - ENABLE_STANDARDIZATION=true
+      - FEAST_ENABLE=true
+      - FEAST_REPO_PATH=/app/feast_repo
+      - FEAST_ONLINE_STORE_TYPE=redis
+      - FEAST_OFFLINE_STORE_TYPE=file
+      - STANDARDIZATION_METHOD=z-score
+    depends_on:
+      - kafka
+      - postgresql
+      - redis
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8083/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  predictive-maintenance-network:
+    external: true
+

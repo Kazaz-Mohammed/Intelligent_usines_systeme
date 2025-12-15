@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: detection-anomalies-service
+  namespace: predictive-maintenance
+  labels:
+    app: detection-anomalies
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8084
+    targetPort: 8084
+    protocol: TCP
+    name: http
+  selector:
+    app: detection-anomalies
+

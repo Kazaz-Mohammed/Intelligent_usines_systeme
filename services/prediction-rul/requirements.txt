@@ -1,0 +1,45 @@
+# FastAPI et serveur
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Kafka
+confluent-kafka==2.3.0
+
+# Data Processing
+pandas==2.1.3
+numpy==1.26.2
+scipy==1.11.4
+
+# Machine Learning - RUL Prediction
+scikit-learn==1.3.2
+xgboost==2.0.3
+
+# Deep Learning
+torch==2.1.0
+torchvision==0.16.0
+
+# MLflow
+mlflow==2.8.1
+
+# Database
+psycopg2-binary==2.9.9
+
+# Calibration (utilise sklearn.calibration qui est inclus dans scikit-learn)
+# scikit-calib n'existe pas, on utilise sklearn.calibration directement
+
+# Logging
+python-json-logger==2.0.7
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+

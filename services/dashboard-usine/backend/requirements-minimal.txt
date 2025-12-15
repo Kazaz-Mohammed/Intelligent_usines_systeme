@@ -1,0 +1,25 @@
+# Minimal requirements for basic functionality
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+httpx==0.25.2
+aiohttp==3.9.1
+python-dotenv==1.0.0
+kafka-python==2.0.2
+reportlab==4.0.7
+
+# Database - using SQLAlchemy async with psycopg for easier installation
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+
+# Optional: Install these separately if needed
+# asyncpg==0.29.0  # Requires C compiler
+# pandas==2.1.3    # Requires C compiler
+# numpy==1.26.2    # Requires C compiler
+# geopandas==0.14.1 # Requires C compiler and many dependencies
+# geoalchemy2==0.14.2
+# shapely==2.0.2
+

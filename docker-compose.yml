@@ -1,0 +1,367 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Infrastructure Services
+  # ============================================
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/lib/zookeeper/data/myid || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    hostname: kafka
+    depends_on:
+      zookeeper:
+        condition: service_started
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  postgresql:
+    image: timescale/timescaledb:latest-pg16
+    container_name: postgresql
+    hostname: postgresql
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-predictive_maintenance}
+      POSTGRES_USER: ${POSTGRES_USER:-pmuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pmpassword}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pmuser} -d ${POSTGRES_DB:-predictive_maintenance}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  # ============================================
+  # Application Services
+  # ============================================
+
+  preprocessing:
+    build:
+      context: ./services/preprocessing
+      dockerfile: Dockerfile
+    container_name: preprocessing-service
+    hostname: preprocessing
+    ports:
+      - "8082:8082"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  extraction-features:
+    build:
+      context: ./services/extraction-features
+      dockerfile: Dockerfile
+    container_name: extraction-features-service
+    hostname: extraction-features
+    ports:
+      - "8083:8083"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8083/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  detection-anomalies:
+    build:
+      context: ./services/detection-anomalies
+      dockerfile: Dockerfile
+    container_name: detection-anomalies-service
+    hostname: detection-anomalies
+    ports:
+      - "8084:8084"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - detection-anomalies-models:/app/models
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8084/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  prediction-rul:
+    build:
+      context: ./services/prediction-rul
+      dockerfile: Dockerfile
+    container_name: prediction-rul-service
+    hostname: prediction-rul
+    ports:
+      - "8085:8085"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - prediction-rul-models:/app/models
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8085/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  orchestrateur-maintenance:
+    build:
+      context: ./services/orchestrateur-maintenance
+      dockerfile: Dockerfile
+    container_name: orchestrateur-maintenance-service
+    hostname: orchestrateur-maintenance
+    ports:
+      - "8087:8087"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB:-predictive_maintenance}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-pmuser}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  dashboard-backend:
+    build:
+      context: ./services/dashboard-usine/backend
+      dockerfile: Dockerfile
+    container_name: dashboard-backend-service
+    hostname: dashboard-backend
+    ports:
+      - "8091:8091"
+    environment:
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+      - EXTRACTION_FEATURES_URL=http://extraction-features:8083
+      - DETECTION_ANOMALIES_URL=http://detection-anomalies:8084
+      - PREDICTION_RUL_URL=http://prediction-rul:8085
+      - ORCHESTRATOR_URL=http://orchestrateur-maintenance:8087
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8091
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      extraction-features:
+        condition: service_healthy
+      detection-anomalies:
+        condition: service_healthy
+      prediction-rul:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8091/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  dashboard-frontend:
+    build:
+      context: ./services/dashboard-usine/predictive-maintenance-dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard-frontend-service
+    hostname: dashboard-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8091/api/v1
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8091/ws/dashboard
+      - NODE_ENV=production
+    depends_on:
+      - dashboard-backend
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Optional Tools (use --profile tools to enable)
+  # ============================================
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    hostname: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - predictive-maintenance-network
+    profiles:
+      - tools
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    hostname: pgadmin
+    depends_on:
+      - postgresql
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@pm.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - predictive-maintenance-network
+    profiles:
+      - tools
+    restart: unless-stopped
+
+volumes:
+  zookeeper-data:
+    driver: local
+  zookeeper-logs:
+    driver: local
+  kafka-data:
+    driver: local
+  postgresql-data:
+    driver: local
+  detection-anomalies-models:
+    driver: local
+  prediction-rul-models:
+    driver: local
+  pgadmin-data:
+    driver: local
+
+networks:
+  predictive-maintenance-network:
+    driver: bridge
+    name: predictive-maintenance-network
+

@@ -1,0 +1,241 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyTorch / ML
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.pb
+*.onnx
+*.tflite
+mlruns/
+mlflow.db
+.mlflow/
+models/
+checkpoints/
+wandb/
+
+# Java / Spring Boot
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+.classpath
+.project
+.settings/
+*.iml
+*.iws
+*.ipr
+.idea/
+bin/
+out/
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.DS_Store
+dist/
+build/
+.next/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+*.iws
+*.ipr
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# Secrets and credentials
+secrets/
+credentials/
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+*.keystore
+config/secrets.yml
+application-secrets.yml
+
+# Logs
+*.log
+logs/
+log/
+*.log.*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+postgres-data/
+timescaledb-data/
+influxdb-data/
+minio-data/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+
+# Data files (large datasets)
+datasets/raw/
+datasets/processed/
+*.csv
+*.parquet
+*.h5
+*.hdf5
+data/raw/
+data/processed/
+!datasets/nasa-cmapss/README.md
+# Keep small example data if needed
+!datasets/example/*.csv
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# KNIME
+.metadata/
+.knime/
+knime-workspace/
+*.knwf.bak
+*.knwf~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+
+# Backup files
+*.bak
+*.backup
+*~
+*.swp
+
+# Test files
+test-results/
+test-output/
+.coverage
+.pytest_cache/
+junit.xml
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+site/
+
+# Package files
+*.tar.gz
+*.zip
+*.rar
+
+# Local configuration
+local/
+local_config.yml
+application-local.yml
+
+# MLflow artifacts (can be large)
+mlflow-artifacts/
+mlruns/
+
+# Feast feature store
+.feast/
+feature_repo/
+.feast_cache/
+
+# Kafka data
+kafka-data/
+zookeeper-data/
+
+# MinIO data
+minio-data/
+
+# TimescaleDB backups
+*.sql.gz
+backups/
+
+# Monitoring data
+prometheus-data/
+grafana-data/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+

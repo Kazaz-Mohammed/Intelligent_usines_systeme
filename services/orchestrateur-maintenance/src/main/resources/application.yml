@@ -1,0 +1,85 @@
+spring:
+  application:
+    name: orchestrateur-maintenance-service
+
+  # Database
+  datasource:
+    url: jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:predictive_maintenance}
+    username: ${DATABASE_USER:pmuser}
+    password: ${DATABASE_PASSWORD:pmpassword}
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # Kafka
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: orchestrateur-maintenance-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Server Configuration (MOVED TO ROOT LEVEL)
+server:
+  port: 8087
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.predictivemaintenance.orchestrateur: DEBUG
+    org.drools: INFO
+    org.springframework.kafka: INFO
+
+# Service Configuration
+orchestrateur:
+  maintenance:
+    # Topics Kafka
+    kafka:
+      topic-anomalies: ${KAFKA_TOPIC_ANOMALIES:anomalies-detected}
+      topic-rul-predictions: ${KAFKA_TOPIC_RUL_PREDICTIONS:rul-predictions}
+      topic-work-orders: ${KAFKA_TOPIC_WORK_ORDERS:work-orders}
+      topic-maintenance-plans: ${KAFKA_TOPIC_MAINTENANCE_PLANS:maintenance-plans}
+    
+    # Optimisation
+    optimization:
+      enabled: true
+      max-iterations: 1000
+      time-limit-seconds: 60
+    
+    # Contraintes
+    constraints:
+      max-technicians-per-shift: 10
+      min-time-between-interventions-hours: 2
+      max-intervention-duration-hours: 8
+      safety-constraints-enabled: true
+    
+    # SLA
+    sla:
+      critical-response-hours: 1
+      high-priority-response-hours: 4
+      medium-priority-response-hours: 24
+      low-priority-response-hours: 72
+

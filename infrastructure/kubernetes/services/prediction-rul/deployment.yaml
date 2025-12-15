@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prediction-rul
+  namespace: predictive-maintenance
+  labels:
+    app: prediction-rul
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prediction-rul
+  template:
+    metadata:
+      labels:
+        app: prediction-rul
+    spec:
+      containers:
+      - name: prediction-rul
+        image: predictive-maintenance/prediction-rul:latest
+        ports:
+        - containerPort: 8085
+        env:
+        - name: DATABASE_HOST
+          value: "postgresql-service"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgresql-config
+              key: database-name
+        - name: DATABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgresql-config
+              key: database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: predictive-maintenance-secrets
+              key: postgresql-password
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-config
+              key: bootstrap-servers
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            configMapKeyRef:
+              name: services-config
+              key: mlflow-url
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 60
+          periodSeconds: 10
+

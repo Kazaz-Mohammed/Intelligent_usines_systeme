@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: dashboard-monitoring-service-test
+  
+  # Database (H2 pour les tests)
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  # Kafka (mock pour les tests)
+  kafka:
+    bootstrap-servers: localhost:9092
+
+# Dashboard Configuration
+dashboard:
+  monitoring:
+    update-interval-seconds: 5
+    metrics-retention-days: 30
+    services:
+      test-service: http://localhost:8080
+    alerts:
+      enabled: true
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.predictivemaintenance.dashboard: DEBUG
+

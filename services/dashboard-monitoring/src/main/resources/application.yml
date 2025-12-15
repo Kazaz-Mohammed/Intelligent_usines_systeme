@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: dashboard-monitoring-service
+  
+  # Database
+  datasource:
+    url: jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:predictive_maintenance}
+    username: ${DATABASE_USER:pmuser}
+    password: ${DATABASE_PASSWORD:pmpassword}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # Kafka
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: dashboard-monitoring-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Server
+server:
+  port: ${SERVER_PORT:8090}
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Dashboard Configuration
+dashboard:
+  monitoring:
+    update-interval-seconds: ${DASHBOARD_UPDATE_INTERVAL:5}
+    metrics-retention-days: ${METRICS_RETENTION_DAYS:30}
+    services:
+      ingestion-iiot: http://localhost:8081
+      extraction-features: http://localhost:8083
+      detection-anomalies: http://localhost:8084
+      prediction-rul: http://localhost:8085
+      orchestrateur-maintenance: http://localhost:8087
+    alerts:
+      enabled: ${ALERTS_ENABLED:true}
+      email-enabled: ${ALERTS_EMAIL_ENABLED:false}
+      sms-enabled: ${ALERTS_SMS_ENABLED:false}
+      threshold-critical: ${ALERT_THRESHOLD_CRITICAL:10}
+      threshold-high: ${ALERT_THRESHOLD_HIGH:5}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.predictivemaintenance.dashboard: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+

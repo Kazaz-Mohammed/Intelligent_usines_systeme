@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrateur-maintenance
+  namespace: predictive-maintenance
+  labels:
+    app: orchestrateur-maintenance
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orchestrateur-maintenance
+  template:
+    metadata:
+      labels:
+        app: orchestrateur-maintenance
+    spec:
+      containers:
+      - name: orchestrateur-maintenance
+        image: predictive-maintenance/orchestrateur-maintenance:latest
+        ports:
+        - containerPort: 8087
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgresql-service:5432/predictive_maintenance"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgresql-config
+              key: database-user
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: predictive-maintenance-secrets
+              key: postgresql-password
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-config
+              key: bootstrap-servers
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8087
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8087
+          initialDelaySeconds: 30
+          periodSeconds: 10
+

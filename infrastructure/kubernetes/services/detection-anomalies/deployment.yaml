@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: detection-anomalies
+  namespace: predictive-maintenance
+  labels:
+    app: detection-anomalies
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: detection-anomalies
+  template:
+    metadata:
+      labels:
+        app: detection-anomalies
+    spec:
+      containers:
+      - name: detection-anomalies
+        image: predictive-maintenance/detection-anomalies:latest
+        ports:
+        - containerPort: 8084
+        env:
+        - name: DATABASE_HOST
+          value: "postgresql-service"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgresql-config
+              key: database-name
+        - name: DATABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgresql-config
+              key: database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: predictive-maintenance-secrets
+              key: postgresql-password
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-config
+              key: bootstrap-servers
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            configMapKeyRef:
+              name: services-config
+              key: mlflow-url
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 60
+          periodSeconds: 10
+

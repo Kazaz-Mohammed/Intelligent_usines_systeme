@@ -1,0 +1,42 @@
+# Docker Compose pour le service Prétraitement (développement local)
+services:
+  preprocessing-service:
+    build: .
+    container_name: preprocessing-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVICE_NAME=preprocessing-service
+      - SERVICE_PORT=8082
+      - LOG_LEVEL=INFO
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONSUMER_GROUP=preprocessing-service
+      - KAFKA_TOPIC_INPUT=sensor-data
+      - KAFKA_TOPIC_OUTPUT=preprocessed-data
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=predictive_maintenance
+      - DATABASE_USER=pmuser
+      - DATABASE_PASSWORD=pmpassword
+      - WINDOW_SIZE=100
+      - WINDOW_OVERLAP=0.5
+      - OUTLIER_THRESHOLD=3.0
+      - ENABLE_DENOISING=true
+      - ENABLE_FREQUENCY_ANALYSIS=true
+    depends_on:
+      - kafka
+      - postgresql
+    networks:
+      - predictive-maintenance
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  predictive-maintenance:
+    external: true
+

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  namespace: predictive-maintenance
+data:
+  database-name: "predictive_maintenance"
+  database-user: "pmuser"
+  database-port: "5432"
+  timescaledb-enabled: "true"
+

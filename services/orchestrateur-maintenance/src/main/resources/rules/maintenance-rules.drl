@@ -1,0 +1,234 @@
+package com.predictivemaintenance.orchestrateur.rules
+
+import com.predictivemaintenance.orchestrateur.model.*
+import com.predictivemaintenance.orchestrateur.service.DroolsRuleService.MaintenanceDecision
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
+// ============================================
+// RÈGLES DE PRIORISATION BASÉES SUR ANOMALIES
+// ============================================
+
+/**
+ * Règle 1: Anomalie critique avec score élevé -> Priorité CRITICAL
+ */
+rule "Anomalie Critique - Priorité CRITICAL"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "critical",
+            anomalyContext.anomalyScore >= 0.9
+        )
+    then
+        decision.setPriority(PriorityLevel.CRITICAL);
+        decision.setInterventionType("corrective");
+        decision.setReason("Anomalie critique détectée avec score élevé");
+        System.out.println("Règle déclenchée: Anomalie Critique -> CRITICAL");
+end
+
+/**
+ * Règle 2: Anomalie haute criticité -> Priorité HIGH
+ */
+rule "Anomalie Haute Criticité - Priorité HIGH"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "high",
+            anomalyContext.anomalyScore >= 0.7
+        )
+    then
+        decision.setPriority(PriorityLevel.HIGH);
+        decision.setInterventionType("corrective");
+        decision.setReason("Anomalie haute criticité détectée");
+        System.out.println("Règle déclenchée: Anomalie Haute -> HIGH");
+end
+
+/**
+ * Règle 3: Anomalie moyenne -> Priorité MEDIUM
+ */
+rule "Anomalie Moyenne - Priorité MEDIUM"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "medium",
+            anomalyContext.anomalyScore >= 0.5
+        )
+    then
+        decision.setPriority(PriorityLevel.MEDIUM);
+        decision.setInterventionType("corrective");
+        decision.setReason("Anomalie moyenne détectée");
+        System.out.println("Règle déclenchée: Anomalie Moyenne -> MEDIUM");
+end
+
+/**
+ * Règle 4: Anomalie basse -> Priorité LOW
+ */
+rule "Anomalie Basse - Priorité LOW"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "low",
+            anomalyContext.anomalyScore < 0.5
+        )
+    then
+        decision.setPriority(PriorityLevel.LOW);
+        decision.setInterventionType("preventive");
+        decision.setReason("Anomalie basse détectée");
+        System.out.println("Règle déclenchée: Anomalie Basse -> LOW");
+end
+
+// ============================================
+// RÈGLES BASÉES SUR RUL (Remaining Useful Life)
+// ============================================
+
+/**
+ * Règle 5: RUL très faible (< 50 cycles) -> Priorité CRITICAL
+ */
+rule "RUL Très Faible - Priorité CRITICAL"
+    when
+        decision : MaintenanceDecision(
+            rulContext != null,
+            rulContext.predictedRul < 50,
+            rulContext.confidenceIntervalUpper < 100
+        )
+    then
+        decision.setPriority(PriorityLevel.CRITICAL);
+        decision.setInterventionType("predictive");
+        decision.setReason("RUL très faible détectée (< 50 cycles)");
+        System.out.println("Règle déclenchée: RUL Très Faible -> CRITICAL");
+end
+
+/**
+ * Règle 6: RUL faible (50-150 cycles) -> Priorité HIGH
+ */
+rule "RUL Faible - Priorité HIGH"
+    when
+        decision : MaintenanceDecision(
+            rulContext != null,
+            rulContext.predictedRul >= 50,
+            rulContext.predictedRul < 150,
+            rulContext.confidenceIntervalUpper < 200
+        )
+    then
+        decision.setPriority(PriorityLevel.HIGH);
+        decision.setInterventionType("predictive");
+        decision.setReason("RUL faible détectée (50-150 cycles)");
+        System.out.println("Règle déclenchée: RUL Faible -> HIGH");
+end
+
+/**
+ * Règle 7: RUL moyenne (150-300 cycles) -> Priorité MEDIUM
+ */
+rule "RUL Moyenne - Priorité MEDIUM"
+    when
+        decision : MaintenanceDecision(
+            rulContext != null,
+            rulContext.predictedRul >= 150,
+            rulContext.predictedRul < 300
+        )
+    then
+        decision.setPriority(PriorityLevel.MEDIUM);
+        decision.setInterventionType("preventive");
+        decision.setReason("RUL moyenne détectée (150-300 cycles)");
+        System.out.println("Règle déclenchée: RUL Moyenne -> MEDIUM");
+end
+
+/**
+ * Règle 8: RUL élevée (>= 300 cycles) -> Priorité LOW
+ */
+rule "RUL Élevée - Priorité LOW"
+    when
+        decision : MaintenanceDecision(
+            rulContext != null,
+            rulContext.predictedRul >= 300
+        )
+    then
+        decision.setPriority(PriorityLevel.LOW);
+        decision.setInterventionType("preventive");
+        decision.setReason("RUL élevée détectée (>= 300 cycles)");
+        System.out.println("Règle déclenchée: RUL Élevée -> LOW");
+end
+
+// ============================================
+// RÈGLES COMBINÉES (ANOMALIE + RUL)
+// ============================================
+
+/**
+ * Règle 9: Anomalie critique ET RUL faible -> Priorité CRITICAL (renforcée)
+ */
+rule "Anomalie Critique + RUL Faible - Priorité CRITICAL Renforcée"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "critical",
+            rulContext != null,
+            rulContext.predictedRul < 100
+        )
+    then
+        decision.setPriority(PriorityLevel.CRITICAL);
+        decision.setInterventionType("corrective");
+        decision.setReason("Anomalie critique combinée avec RUL faible - Intervention urgente requise");
+        System.out.println("Règle déclenchée: Anomalie Critique + RUL Faible -> CRITICAL Renforcée");
+end
+
+/**
+ * Règle 10: Anomalie haute ET RUL moyenne -> Priorité HIGH
+ */
+rule "Anomalie Haute + RUL Moyenne - Priorité HIGH"
+    when
+        decision : MaintenanceDecision(
+            anomalyContext != null,
+            anomalyContext.isAnomaly == true,
+            anomalyContext.criticality == "high",
+            rulContext != null,
+            rulContext.predictedRul >= 100,
+            rulContext.predictedRul < 250
+        )
+    then
+        decision.setPriority(PriorityLevel.HIGH);
+        decision.setInterventionType("corrective");
+        decision.setReason("Anomalie haute combinée avec RUL moyenne");
+        System.out.println("Règle déclenchée: Anomalie Haute + RUL Moyenne -> HIGH");
+end
+
+// ============================================
+// RÈGLES DE VALIDATION ET CONTRAINTES
+// ============================================
+
+/**
+ * Règle 11: Validation - Si aucune donnée, priorité par défaut MEDIUM
+ */
+rule "Priorité par Défaut - MEDIUM"
+    when
+        decision : MaintenanceDecision(
+            priority == null,
+            (anomalyContext == null || anomalyContext.isAnomaly == false),
+            (rulContext == null || rulContext.predictedRul == null)
+        )
+    then
+        decision.setPriority(PriorityLevel.MEDIUM);
+        decision.setInterventionType("preventive");
+        decision.setReason("Aucune donnée d'anomalie ou RUL - Priorité par défaut");
+        System.out.println("Règle déclenchée: Priorité par Défaut -> MEDIUM");
+end
+
+/**
+ * Règle 12: Contrainte de sécurité - Toujours CRITICAL pour équipements critiques
+ */
+rule "Équipement Critique - Toujours CRITICAL"
+    when
+        decision : MaintenanceDecision(
+            assetId != null,
+            assetId matches ".*CRITICAL.*|.*SAFETY.*|.*EMERGENCY.*"
+        )
+    then
+        decision.setPriority(PriorityLevel.CRITICAL);
+        decision.setReason("Équipement critique identifié - Priorité maximale");
+        System.out.println("Règle déclenchée: Équipement Critique -> CRITICAL");
+end
+

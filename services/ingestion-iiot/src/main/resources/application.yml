@@ -1,0 +1,105 @@
+spring:
+  application:
+    name: ingestion-iiot
+
+  # PostgreSQL / TimescaleDB Configuration
+  datasource:
+    url: jdbc:postgresql://${DATABASE_HOST:postgresql}:${DATABASE_PORT:5432}/${DATABASE_NAME:predictive_maintenance}
+    username: ${DATABASE_USER:pmuser}
+    password: ${DATABASE_PASSWORD:pmpassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        max.in.flight.requests.per.connection: 1
+        enable.idempotence: true
+
+# OPC UA Configuration
+opcua:
+  enabled: ${OPCUA_ENABLED:true}
+  endpoint-url: ${OPCUA_ENDPOINT_URL:opc.tcp://localhost:4840}
+  connection-timeout: ${OPCUA_CONNECTION_TIMEOUT:5000}
+  request-timeout: ${OPCUA_REQUEST_TIMEOUT:10000}
+  subscription-interval: ${OPCUA_SUBSCRIPTION_INTERVAL:1000}
+  nodes:
+    # Exemple de nodes à surveiller
+    - node-id: "ns=2;s=Temperature"
+      asset-id: "ASSET001"
+      sensor-id: "TEMP001"
+      unit: "°C"
+    - node-id: "ns=2;s=Vibration"
+      asset-id: "ASSET001"
+      sensor-id: "VIB001"
+      unit: "mm/s"
+
+# MinIO Configuration
+minio:
+  enabled: ${MINIO_ENABLED:true}
+  endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: ${MINIO_BUCKET_NAME:raw-sensor-data}
+  secure: ${MINIO_SECURE:false}
+
+# Application Configuration
+app:
+  ingestion:
+    batch-size: ${INGESTION_BATCH_SIZE:100}
+    flush-interval: ${INGESTION_FLUSH_INTERVAL:5000}
+    buffer-size: ${INGESTION_BUFFER_SIZE:1000}
+    enable-edge-buffer: ${ENABLE_EDGE_BUFFER:true}
+    edge-buffer-path: ${EDGE_BUFFER_PATH:/tmp/ingestion-buffer}
+
+# Management / Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.predictivemaintenance.ingestion: DEBUG
+    org.eclipse.milo: WARN
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+

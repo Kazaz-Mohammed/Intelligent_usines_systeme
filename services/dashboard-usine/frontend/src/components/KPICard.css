@@ -1,0 +1,42 @@
+.kpi-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-top: 4px solid;
+}
+
+.kpi-title {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.kpi-unit {
+  font-size: 1rem;
+  color: #7f8c8d;
+  margin-left: 5px;
+}
+
+.kpi-trend {
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+.kpi-trend.positive {
+  color: #27ae60;
+}
+
+.kpi-trend.negative {
+  color: #e74c3c;
+}
+

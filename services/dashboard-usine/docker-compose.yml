@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8091:8091"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=predictive_maintenance
+      - DATABASE_USER=pmuser
+      - DATABASE_PASSWORD=pmpassword
+      - EXTRACTION_FEATURES_URL=http://extraction-features:8083
+      - DETECTION_ANOMALIES_URL=http://detection-anomalies:8084
+      - PREDICTION_RUL_URL=http://prediction-rul:8085
+      - ORCHESTRATOR_URL=http://orchestrateur-maintenance:8087
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+    networks:
+      - predictive-maintenance
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8091
+      - REACT_APP_WS_URL=ws://localhost:8091
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - predictive-maintenance
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=predictive_maintenance
+      - POSTGRES_USER=pmuser
+      - POSTGRES_PASSWORD=pmpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - predictive-maintenance
+
+volumes:
+  postgres_data:
+
+networks:
+  predictive-maintenance:
+    external: true
+
