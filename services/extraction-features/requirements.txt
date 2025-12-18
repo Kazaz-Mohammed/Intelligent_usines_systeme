@@ -1,3 +1,8 @@
+# Build dependencies (needed for compiling some packages)
+Cython>=3.0.0
+setuptools>=65.0.0
+wheel>=0.40.0
+
 # FastAPI et serveur
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
@@ -16,6 +21,7 @@ scipy==1.11.4
 tsfresh==0.20.1
 # tsflex==0.4.1  # Not currently used, commented out to avoid build issues
 PyWavelets==1.4.1
+statsmodels>=0.14.1  # Explicitly require newer version with pre-built wheels for Python 3.11 (0.13.x fails to compile)
 
 # Feature Store
 feast==0.36.0  # Updated from 0.36.3 (doesn't exist) to 0.36.0

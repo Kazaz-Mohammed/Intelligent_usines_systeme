@@ -21,6 +21,6 @@ COPY . .
 # Expose port
 EXPOSE 8091
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8091"]
+# Run application (use python -m to ensure uvicorn is found)
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8091"]
 
