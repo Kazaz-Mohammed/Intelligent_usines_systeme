@@ -105,8 +105,8 @@ pipeline {
                                     echo 'Installation des dépendances Python pour Preprocessing...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install --force-reinstall --no-deps numpy pandas 2>nul || pip install --ignore-installed numpy pandas'
-                                        bat 'pip install -r requirements.txt'
+                                        bat 'pip uninstall -y numpy pandas 2>nul || echo No existing numpy/pandas to uninstall'
+                                        bat 'pip install -r requirements.txt --ignore-installed'
                                     }
                                 }
                             }
@@ -184,8 +184,8 @@ pipeline {
                                     echo 'Installation des dépendances Python pour DetectionAnomalies...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install --force-reinstall --no-deps numpy pandas 2>nul || pip install --ignore-installed numpy pandas'
-                                        bat 'pip install -r requirements.txt'
+                                        bat 'pip uninstall -y numpy pandas 2>nul || echo No existing numpy/pandas to uninstall'
+                                        bat 'pip install -r requirements.txt --ignore-installed'
                                     }
                                 }
                             }
