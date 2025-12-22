@@ -43,7 +43,7 @@ pipeline {
                                     script {
                                         def mvn = tool 'maven'
                                         withSonarQubeEnv('SonarQube') {
-                                            bat "${mvn}\\bin\\mvn clean verify sonar:sonar ^ " +
+                                            bat "\"${mvn}\\bin\\mvn\" clean verify sonar:sonar ^ " +
                                                 "-Dsonar.projectKey=ingestion-iiot ^ " +
                                                 "-Dsonar.projectName=IngestionIIoT ^ " +
                                                 "-Dsonar.sources=src/main ^ " +
@@ -78,7 +78,7 @@ pipeline {
                                     script {
                                         def mvn = tool 'maven'
                                         withSonarQubeEnv('SonarQube') {
-                                            bat "${mvn}\\bin\\mvn clean verify sonar:sonar ^ " +
+                                            bat "\"${mvn}\\bin\\mvn\" clean verify sonar:sonar ^ " +
                                                 "-Dsonar.projectKey=orchestrateur-maintenance ^ " +
                                                 "-Dsonar.projectName=OrchestrateurMaintenance ^ " +
                                                 "-Dsonar.sources=src/main ^ " +
@@ -115,19 +115,19 @@ pipeline {
                             steps {
                                 dir('services/preprocessing') {
                                     script {
+                                        def scannerHome = tool 'SonarQubeScanner'
                                         withSonarQubeEnv('SonarQube') {
-                                            // Check if sonar-project.properties exists, otherwise use command line args
-                                            bat '''
+                                            bat """
                                                 if exist sonar-project.properties (
-                                                    sonar-scanner
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\"
                                                 ) else (
-                                                    sonar-scanner ^
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\" ^
                                                         -Dsonar.projectKey=preprocessing ^
                                                         -Dsonar.projectName=Preprocessing ^
                                                         -Dsonar.sources=app ^
                                                         -Dsonar.python.version=3.9
                                                 )
-                                            '''
+                                            """
                                         }
                                     }
                                 }
@@ -154,18 +154,19 @@ pipeline {
                             steps {
                                 dir('services/extraction-features') {
                                     script {
+                                        def scannerHome = tool 'SonarQubeScanner'
                                         withSonarQubeEnv('SonarQube') {
                                             bat '''
                                                 if exist sonar-project.properties (
-                                                    sonar-scanner
+                                                    "%SCANNER_HOME%\\bin\\sonar-scanner.bat"
                                                 ) else (
-                                                    sonar-scanner ^
+                                                    "%SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
                                                         -Dsonar.projectKey=extraction-features ^
                                                         -Dsonar.projectName=ExtractionFeatures ^
                                                         -Dsonar.sources=app ^
                                                         -Dsonar.python.version=3.9
                                                 )
-                                            '''
+                                            '''.replace('%SCANNER_HOME%', scannerHome)
                                         }
                                     }
                                 }
@@ -192,18 +193,19 @@ pipeline {
                             steps {
                                 dir('services/detection-anomalies') {
                                     script {
+                                        def scannerHome = tool 'SonarQubeScanner'
                                         withSonarQubeEnv('SonarQube') {
-                                            bat '''
+                                            bat """
                                                 if exist sonar-project.properties (
-                                                    sonar-scanner
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\"
                                                 ) else (
-                                                    sonar-scanner ^
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\" ^
                                                         -Dsonar.projectKey=detection-anomalies ^
                                                         -Dsonar.projectName=DetectionAnomalies ^
                                                         -Dsonar.sources=app ^
                                                         -Dsonar.python.version=3.9
                                                 )
-                                            '''
+                                            """
                                         }
                                     }
                                 }
@@ -230,18 +232,19 @@ pipeline {
                             steps {
                                 dir('services/prediction-rul') {
                                     script {
+                                        def scannerHome = tool 'SonarQubeScanner'
                                         withSonarQubeEnv('SonarQube') {
-                                            bat '''
+                                            bat """
                                                 if exist sonar-project.properties (
-                                                    sonar-scanner
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\"
                                                 ) else (
-                                                    sonar-scanner ^
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\" ^
                                                         -Dsonar.projectKey=prediction-rul ^
                                                         -Dsonar.projectName=PredictionRUL ^
                                                         -Dsonar.sources=app ^
                                                         -Dsonar.python.version=3.9
                                                 )
-                                            '''
+                                            """
                                         }
                                     }
                                 }
