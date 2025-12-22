@@ -156,17 +156,17 @@ pipeline {
                                     script {
                                         def scannerHome = tool 'SonarQubeScanner'
                                         withSonarQubeEnv('SonarQube') {
-                                            bat '''
+                                            bat """
                                                 if exist sonar-project.properties (
-                                                    "%SCANNER_HOME%\\bin\\sonar-scanner.bat"
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\"
                                                 ) else (
-                                                    "%SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
+                                                    \"${scannerHome}\\bin\\sonar-scanner.bat\" ^
                                                         -Dsonar.projectKey=extraction-features ^
                                                         -Dsonar.projectName=ExtractionFeatures ^
                                                         -Dsonar.sources=app ^
                                                         -Dsonar.python.version=3.9
                                                 )
-                                            '''.replace('%SCANNER_HOME%', scannerHome)
+                                            """
                                         }
                                     }
                                 }
