@@ -104,8 +104,12 @@ pipeline {
                                 dir('services/preprocessing') {
                                     echo 'Installation des dépendances Python pour Preprocessing...'
                                     script {
-                                        bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install -r requirements.txt --user --ignore-installed'
+                                        bat '''
+                                            if not exist venv python -m venv venv
+                                            call venv\\Scripts\\activate.bat
+                                            python -m pip install --upgrade pip
+                                            pip install -r requirements.txt
+                                        '''
                                     }
                                 }
                             }
@@ -143,8 +147,12 @@ pipeline {
                                 dir('services/extraction-features') {
                                     echo 'Installation des dépendances Python pour ExtractionFeatures...'
                                     script {
-                                        bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install -r requirements.txt --user --ignore-installed'
+                                        bat '''
+                                            if not exist venv python -m venv venv
+                                            call venv\\Scripts\\activate.bat
+                                            python -m pip install --upgrade pip
+                                            pip install -r requirements.txt
+                                        '''
                                     }
                                 }
                             }
@@ -182,8 +190,12 @@ pipeline {
                                 dir('services/detection-anomalies') {
                                     echo 'Installation des dépendances Python pour DetectionAnomalies...'
                                     script {
-                                        bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install -r requirements.txt --user --ignore-installed'
+                                        bat '''
+                                            if not exist venv python -m venv venv
+                                            call venv\\Scripts\\activate.bat
+                                            python -m pip install --upgrade pip
+                                            pip install -r requirements.txt
+                                        '''
                                     }
                                 }
                             }
@@ -221,8 +233,12 @@ pipeline {
                                 dir('services/prediction-rul') {
                                     echo 'Installation des dépendances Python pour PredictionRUL...'
                                     script {
-                                        bat 'python -m pip install --upgrade pip'
-                                        bat 'pip install -r requirements.txt --user --ignore-installed'
+                                        bat '''
+                                            if not exist venv python -m venv venv
+                                            call venv\\Scripts\\activate.bat
+                                            python -m pip install --upgrade pip
+                                            pip install -r requirements.txt
+                                        '''
                                     }
                                 }
                             }
