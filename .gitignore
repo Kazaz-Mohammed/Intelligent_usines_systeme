@@ -238,4 +238,4 @@ grafana-data/
 *.pid
 *.seed
 *.pid.lock
-
+migration-backup/
