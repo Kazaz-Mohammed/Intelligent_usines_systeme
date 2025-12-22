@@ -80,6 +80,75 @@ services:
       retries: 5
     volumes:
       - postgresql-data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/01-init-postgres.sql:ro
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  # InfluxDB (Time-series database)
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    hostname: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-adminpassword}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-pm-org}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-sensor-data}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-pm-token-change-in-production}
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  # MinIO (S3-compatible object storage)
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    hostname: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - minio-data:/data
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  # Redis (Cache)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispassword}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis-data:/data
     networks:
       - predictive-maintenance-network
     restart: unless-stopped
@@ -239,6 +308,157 @@ services:
       - predictive-maintenance-network
     restart: unless-stopped
 
+  ingestion-iiot:
+    build:
+      context: ./services/ingestion-iiot
+      dockerfile: Dockerfile
+    container_name: ingestion-iiot-service
+    hostname: ingestion-iiot
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+      - OPCUA_ENDPOINT_URL=opc.tcp://opcua-simulator:4840
+      - OPCUA_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MINIO_ENABLED=true
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_BUCKET=raw-sensor-data
+      # InfluxDB Configuration
+      - INFLUXDB_ENABLED=true
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-pm-token-change-in-production}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-pm-org}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-sensor-data}
+      - INFLUXDB_MEASUREMENT=sensor_data
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB:-predictive_maintenance}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-pmuser}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  # ============================================
+  # Kafka Workers (Consumers)
+  # ============================================
+
+  preprocessing-worker:
+    build:
+      context: ./services/preprocessing
+      dockerfile: Dockerfile
+    container_name: preprocessing-worker
+    hostname: preprocessing-worker
+    command: python -m app.worker
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  extraction-features-worker:
+    build:
+      context: ./services/extraction-features
+      dockerfile: Dockerfile
+    container_name: extraction-features-worker
+    hostname: extraction-features-worker
+    command: python start_worker.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    healthcheck:
+      disable: true
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  detection-anomalies-worker:
+    build:
+      context: ./services/detection-anomalies
+      dockerfile: Dockerfile
+    container_name: detection-anomalies-worker
+    hostname: detection-anomalies-worker
+    command: python start_worker.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    healthcheck:
+      disable: true
+    volumes:
+      - detection-anomalies-models:/app/models
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
+  prediction-rul-worker:
+    build:
+      context: ./services/prediction-rul
+      dockerfile: Dockerfile
+    container_name: prediction-rul-worker
+    hostname: prediction-rul-worker
+    command: python start_worker.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${POSTGRES_DB:-predictive_maintenance}
+      - DATABASE_USER=${POSTGRES_USER:-pmuser}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-pmpassword}
+    healthcheck:
+      disable: true
+    volumes:
+      - prediction-rul-models:/app/models
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - predictive-maintenance-network
+    restart: unless-stopped
+
   dashboard-backend:
     build:
       context: ./services/dashboard-usine/backend
@@ -344,6 +564,20 @@ services:
       - tools
     restart: unless-stopped
 
+  opcua-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.opcua-simulator
+    container_name: opcua-simulator
+    hostname: opcua-simulator
+    ports:
+      - "4840:4840"
+    networks:
+      - predictive-maintenance-network
+    profiles:
+      - tools
+    restart: unless-stopped
+
 volumes:
   zookeeper-data:
     driver: local
@@ -352,6 +586,14 @@ volumes:
   kafka-data:
     driver: local
   postgresql-data:
+    driver: local
+  influxdb-data:
+    driver: local
+  influxdb-config:
+    driver: local
+  minio-data:
+    driver: local
+  redis-data:
     driver: local
   detection-anomalies-models:
     driver: local

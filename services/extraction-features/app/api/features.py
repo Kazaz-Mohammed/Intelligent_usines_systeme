@@ -105,11 +105,11 @@ async def get_features(
         
         # Filtrer par start_time, end_time et feature_names si spécifiés
         if start_time:
-            features = [f for f in features if f.metadata.get("timestamp") and f.metadata.get("timestamp") >= start_time]
+            features = [f for f in features if f.timestamp and f.timestamp >= start_time]
         if end_time:
-            features = [f for f in features if f.metadata.get("timestamp") and f.metadata.get("timestamp") <= end_time]
+            features = [f for f in features if f.timestamp and f.timestamp <= end_time]
         if feature_names:
-            features = [f for f in features if f.name in feature_names]
+            features = [f for f in features if f.feature_name in feature_names]
         
         # Limiter le nombre de résultats
         features = features[:limit]
@@ -154,11 +154,11 @@ async def get_feature_vector(
             raise HTTPException(status_code=404, detail=f"Aucune feature trouvée pour asset_id={asset_id}")
         
         # Créer un vecteur de features à partir des features récentes
-        features_dict = {feature.name: feature.value for feature in features}
+        features_dict = {feature.feature_name: feature.feature_value for feature in features}
         
-        # Extract timestamp, asset_id from metadata
-        first_timestamp = features[0].metadata.get("timestamp") if features[0].metadata else None
-        last_timestamp = features[-1].metadata.get("timestamp") if features[-1].metadata else None
+        # Extract timestamp, asset_id from features
+        first_timestamp = features[0].timestamp if features else None
+        last_timestamp = features[-1].timestamp if features else None
         
         feature_vector = ExtractedFeaturesVector(
             feature_vector_id=feature_vector_id or f"fv_{asset_id}_{uuid.uuid4().hex[:8]}",

@@ -98,16 +98,14 @@ class WaveletFeaturesService:
                     # Énergie par niveau
                     energy_features = self._calculate_energy_by_level(coeffs)
                     for level, energy in energy_features.items():
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"wavelet_energy_level_{level}",
-                            value=float(energy),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"wavelet_energy_level_{level}",
+                            feature_value=float(energy),
                             feature_type="wavelet",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "wavelet": wavelet,
                                 "level": level,
@@ -119,16 +117,14 @@ class WaveletFeaturesService:
                     # Entropie par niveau
                     entropy_features = self._calculate_entropy_by_level(coeffs)
                     for level, entropy in entropy_features.items():
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"wavelet_entropy_level_{level}",
-                            value=float(entropy),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"wavelet_entropy_level_{level}",
+                            feature_value=float(entropy),
                             feature_type="wavelet",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "wavelet": wavelet,
                                 "level": level,
@@ -140,16 +136,14 @@ class WaveletFeaturesService:
                     # Variance par niveau
                     variance_features = self._calculate_variance_by_level(coeffs)
                     for level, variance in variance_features.items():
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"wavelet_variance_level_{level}",
-                            value=float(variance),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"wavelet_variance_level_{level}",
+                            feature_value=float(variance),
                             feature_type="wavelet",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "wavelet": wavelet,
                                 "level": level,
@@ -161,16 +155,14 @@ class WaveletFeaturesService:
                     # Moyenne par niveau
                     mean_features = self._calculate_mean_by_level(coeffs)
                     for level, mean_val in mean_features.items():
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"wavelet_mean_level_{level}",
-                            value=float(mean_val),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"wavelet_mean_level_{level}",
+                            feature_value=float(mean_val),
                             feature_type="wavelet",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "wavelet": wavelet,
                                 "level": level,
@@ -182,16 +174,14 @@ class WaveletFeaturesService:
                     # Écart-type par niveau
                     std_features = self._calculate_std_by_level(coeffs)
                     for level, std_val in std_features.items():
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"wavelet_std_level_{level}",
-                            value=float(std_val),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"wavelet_std_level_{level}",
+                            feature_value=float(std_val),
                             feature_type="wavelet",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "wavelet": wavelet,
                                 "level": level,
@@ -440,16 +430,14 @@ class WaveletFeaturesService:
             
             for level, energy in energy_by_level.items():
                 ratio = energy / total_energy
-                import uuid
                 features.append(ExtractedFeature(
-                    feature_id=str(uuid.uuid4()),
-                    name=f"wavelet_energy_ratio_level_{level}",
-                    value=float(ratio),
+                    timestamp=base_timestamp,
+                    asset_id=asset_id,
+                    sensor_id=sensor_id,
+                    feature_name=f"wavelet_energy_ratio_level_{level}",
+                    feature_value=float(ratio),
                     feature_type="wavelet",
                     metadata={
-                        "timestamp": base_timestamp.isoformat(),
-                        "asset_id": asset_id,
-                        "sensor_id": sensor_id,
                         "window_size": len(data),
                         "wavelet": wavelet,
                         "level": level,

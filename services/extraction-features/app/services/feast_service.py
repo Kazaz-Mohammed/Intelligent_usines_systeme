@@ -79,7 +79,7 @@ class FeastService:
             # Convertir les features en format Feast
             feature_dict = {}
             for feature in features:
-                feature_dict[feature.name] = feature.value
+                feature_dict[feature.feature_name] = feature.feature_value
             
             # Pour une implémentation complète, il faudrait :
             # 1. Créer un DataFrame avec les features

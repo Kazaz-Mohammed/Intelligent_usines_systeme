@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     kafka_consumer_group: str = "preprocessing-service"
     kafka_topic_input: str = "sensor-data"
     kafka_topic_output: str = "preprocessed-data"
-    kafka_auto_offset_reset: str = "earliest"
+    kafka_auto_offset_reset: str = "latest"  # Use "latest" to skip old messages, "earliest" to process all
     kafka_enable_auto_commit: bool = True
     
     # Database

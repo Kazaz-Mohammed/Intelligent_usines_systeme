@@ -69,12 +69,17 @@ class KafkaConsumerService:
         self.running = True
         
         logger.info("Démarrage de la consommation Kafka...")
+        logger.info(f"En attente de messages depuis le topic: {settings.kafka_topic_input}")
         
+        message_count = 0
         try:
             while self.running:
                 msg = self.consumer.poll(timeout=1.0)
                 
                 if msg is None:
+                    # Log every 10 seconds that we're waiting
+                    if message_count == 0:
+                        logger.debug("En attente de messages...")
                     continue
                 
                 if msg.error():
@@ -87,6 +92,16 @@ class KafkaConsumerService:
                 try:
                     # Désérialiser le message JSON
                     data = json.loads(msg.value().decode('utf-8'))
+                    
+                    # Normalize field names: convert camelCase to snake_case for backward compatibility
+                    if 'assetId' in data and 'asset_id' not in data:
+                        data['asset_id'] = data.pop('assetId')
+                    if 'sensorId' in data and 'sensor_id' not in data:
+                        data['sensor_id'] = data.pop('sensorId')
+                    if 'sourceType' in data and 'source_type' not in data:
+                        data['source_type'] = data.pop('sourceType')
+                    if 'sourceEndpoint' in data and 'source_endpoint' not in data:
+                        data['source_endpoint'] = data.pop('sourceEndpoint')
                     
                     # Normalize timestamp if it's a string (fix malformed formats)
                     if 'timestamp' in data and isinstance(data['timestamp'], str):
@@ -105,12 +120,19 @@ class KafkaConsumerService:
                     # Appeler le handler
                     message_handler(sensor_data)
                     
-                    logger.debug(f"Message traité: asset={sensor_data.asset_id}, sensor={sensor_data.sensor_id}")
+                    message_count += 1
+                    logger.info(f"✓ Message #{message_count} traité: asset={sensor_data.asset_id}, sensor={sensor_data.sensor_id}, value={sensor_data.value}")
                     
                 except json.JSONDecodeError as e:
                     logger.error(f"Erreur de désérialisation JSON: {e}")
                 except Exception as e:
                     logger.error(f"Erreur lors du traitement du message: {e}", exc_info=True)
+                    # Log the raw data for debugging
+                    try:
+                        raw_data = json.loads(msg.value().decode('utf-8'))
+                        logger.debug(f"Données du message: {list(raw_data.keys())}")
+                    except:
+                        pass
                     
         except KeyboardInterrupt:
             logger.info("Arrêt demandé par l'utilisateur")

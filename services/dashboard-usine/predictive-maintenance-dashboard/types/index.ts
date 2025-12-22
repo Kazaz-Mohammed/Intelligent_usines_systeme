@@ -38,6 +38,7 @@ export interface Anomaly {
   asset_id: string
   sensor_id?: string
   timestamp: string
+  created_at?: string  // When the anomaly was detected/saved
   severity: "low" | "medium" | "warning" | "high" | "critical"
   is_anomaly: boolean
   anomaly_score?: number

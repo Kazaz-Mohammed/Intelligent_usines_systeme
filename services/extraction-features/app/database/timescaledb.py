@@ -86,14 +86,10 @@ class TimescaleDBService:
                             metadata = EXCLUDED.metadata
                     """
                     
-                    # Extract timestamp, asset_id, sensor_id from metadata
-                    timestamp = feature.metadata.get("timestamp")
-                    asset_id = feature.metadata.get("asset_id")
-                    sensor_id = feature.metadata.get("sensor_id")
-                    
-                    if not timestamp:
-                        logger.warning(f"Feature {feature.feature_id} missing timestamp in metadata, skipping")
-                        return
+                    # Use direct fields from ExtractedFeature model
+                    timestamp = feature.timestamp
+                    asset_id = feature.asset_id
+                    sensor_id = feature.sensor_id
                     
                     metadata_json = json.dumps(feature.metadata) if feature.metadata else None
                     
@@ -104,13 +100,13 @@ class TimescaleDBService:
                         timestamp,
                         asset_id,
                         sensor_id,
-                        feature.name,  # Changed from feature.feature_name
-                        feature.value,  # Changed from feature.feature_value
+                        feature.feature_name,
+                        feature.feature_value,
                         feature_type_value,
                         metadata_json
                     ))
                 conn.commit()
-                logger.debug(f"Feature extraite insérée: {feature.name} pour {asset_id}/{sensor_id}")
+                logger.debug(f"Feature extraite insérée: {feature.feature_name} pour {asset_id}/{sensor_id}")
         except Exception as e:
             logger.error(f"Erreur lors de l'insertion de la feature: {e}", exc_info=True)
             raise
@@ -136,14 +132,10 @@ class TimescaleDBService:
                     
                     values = []
                     for feature in features:
-                        # Extract timestamp, asset_id, sensor_id from metadata
-                        timestamp = feature.metadata.get("timestamp")
-                        asset_id = feature.metadata.get("asset_id")
-                        sensor_id = feature.metadata.get("sensor_id")
-                        
-                        if not timestamp:
-                            logger.warning(f"Feature {feature.feature_id} missing timestamp in metadata, skipping")
-                            continue
+                        # Use direct fields from ExtractedFeature model
+                        timestamp = feature.timestamp
+                        asset_id = feature.asset_id
+                        sensor_id = feature.sensor_id
                         
                         metadata_json = json.dumps(feature.metadata) if feature.metadata else None
                         
@@ -154,8 +146,8 @@ class TimescaleDBService:
                             timestamp,
                             asset_id,
                             sensor_id,
-                            feature.name,  # Changed from feature.feature_name
-                            feature.value,  # Changed from feature.feature_value
+                            feature.feature_name,
+                            feature.feature_value,
                             feature_type_value,
                             metadata_json
                         ))
@@ -273,21 +265,13 @@ class TimescaleDBService:
                     features = []
                     for row in rows:
                         metadata = json.loads(row[6]) if row[6] else {}
-                        # Add timestamp, asset_id, sensor_id to metadata
-                        metadata["timestamp"] = row[0]
-                        metadata["asset_id"] = row[1]
-                        metadata["sensor_id"] = row[2]
-                        
-                        # Generate feature_id if not in metadata
-                        feature_id = metadata.get("feature_id")
-                        if not feature_id:
-                            feature_id = str(uuid.uuid4())
-                            metadata["feature_id"] = feature_id
                         
                         features.append(ExtractedFeature(
-                            feature_id=feature_id,
-                            name=row[3],  # Changed from feature_name
-                            value=float(row[4]),  # Changed from feature_value
+                            timestamp=row[0],
+                            asset_id=row[1],
+                            sensor_id=row[2],
+                            feature_name=row[3],
+                            feature_value=float(row[4]),
                             feature_type=row[5],
                             metadata=metadata
                         ))

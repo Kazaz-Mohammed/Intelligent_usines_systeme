@@ -100,33 +100,33 @@ class StandardizationService:
         for feature in features:
             try:
                 # Obtenir les paramètres de standardisation pour cette feature
-                feature_params = template.get("features", {}).get(feature.name)
+                feature_params = template.get("features", {}).get(feature.feature_name)
                 
                 if feature_params:
                     # Standardiser avec les paramètres du template
                     standardized_value = self._standardize_value(
-                        feature.value,
+                        feature.feature_value,
                         method,
                         feature_params
                     )
                 else:
                     # Standardiser avec la méthode globale (sans template spécifique)
                     standardized_value = self._standardize_value_global(
-                        feature.value,
+                        feature.feature_value,
                         method
                     )
                 
                 # Créer la feature standardisée
-                import uuid
                 standardized_feature = ExtractedFeature(
-                    feature_id=str(uuid.uuid4()),
-                    name=f"{feature.name}_standardized",
-                    value=float(standardized_value),
+                    timestamp=feature.timestamp,
+                    asset_id=feature.asset_id,
+                    sensor_id=feature.sensor_id,
+                    feature_name=f"{feature.feature_name}_standardized",
+                    feature_value=float(standardized_value),
                     feature_type=feature.feature_type,
                     metadata={
                         **(feature.metadata or {}),
-                        "original_value": feature.value,
-                        "original_feature_id": feature.feature_id,
+                        "original_value": feature.feature_value,
                         "standardization_method": method,
                         "asset_type": asset_type,
                         "standardized": True
@@ -136,7 +136,7 @@ class StandardizationService:
                 standardized_features.append(standardized_feature)
                 
             except Exception as e:
-                logger.error(f"Erreur lors de la standardisation de la feature {feature.name}: {e}", exc_info=True)
+                logger.error(f"Erreur lors de la standardisation de la feature {feature.feature_name}: {e}", exc_info=True)
                 # Garder la feature originale en cas d'erreur
                 standardized_features.append(feature)
         
@@ -341,9 +341,9 @@ class StandardizationService:
         
         for features in features_list:
             for feature in features:
-                if feature.name not in features_by_name:
-                    features_by_name[feature.name] = []
-                features_by_name[feature.name].append(feature.value)
+                if feature.feature_name not in features_by_name:
+                    features_by_name[feature.feature_name] = []
+                features_by_name[feature.feature_name].append(feature.feature_value)
         
         # Calculer les statistiques pour chaque feature
         statistics = {}

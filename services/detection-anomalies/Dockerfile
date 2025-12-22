@@ -29,6 +29,8 @@ RUN set -e; \
 
 # Copier le code de l'application
 COPY app ./app
+COPY start_worker.py ./start_worker.py
+COPY models ./models
 
 # Exposer le port
 EXPOSE 8084

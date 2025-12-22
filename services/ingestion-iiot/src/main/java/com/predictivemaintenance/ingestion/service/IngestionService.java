@@ -1,8 +1,8 @@
 package com.predictivemaintenance.ingestion.service;
 
 import com.predictivemaintenance.ingestion.model.SensorData;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,6 @@ import java.util.List;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class IngestionService {
 
     private final OPCUAService opcuaService;
@@ -21,6 +20,31 @@ public class IngestionService {
     private final KafkaProducerService kafkaProducerService;
     private final TimescaleDBService timescaleDBService;
     private final MinIOService minioService;
+    
+    // Optional: InfluxDB service (only available when influxdb.enabled=true)
+    private final InfluxDBService influxDBService;
+
+    @Autowired
+    public IngestionService(
+            OPCUAService opcuaService,
+            DataNormalizationService normalizationService,
+            KafkaProducerService kafkaProducerService,
+            TimescaleDBService timescaleDBService,
+            MinIOService minioService,
+            @Autowired(required = false) InfluxDBService influxDBService) {
+        this.opcuaService = opcuaService;
+        this.normalizationService = normalizationService;
+        this.kafkaProducerService = kafkaProducerService;
+        this.timescaleDBService = timescaleDBService;
+        this.minioService = minioService;
+        this.influxDBService = influxDBService;
+        
+        if (influxDBService != null) {
+            log.info("InfluxDB integration enabled");
+        } else {
+            log.info("InfluxDB integration disabled");
+        }
+    }
 
     /**
      * Collecte et traite les données depuis toutes les sources
@@ -50,8 +74,21 @@ public class IngestionService {
             // 4. Stocker dans TimescaleDB
             timescaleDBService.insertBatch(normalizedDataList);
 
-            // 5. Archiver dans MinIO
-            minioService.storeBatch(normalizedDataList);
+            // 5. Archiver dans MinIO (non-blocking, errors are logged but don't stop ingestion)
+            try {
+                minioService.storeBatch(normalizedDataList);
+            } catch (Exception e) {
+                log.warn("Failed to archive data in MinIO (continuing anyway): {}", e.getMessage());
+            }
+
+            // 6. Stocker dans InfluxDB (non-blocking, optional)
+            if (influxDBService != null) {
+                try {
+                    influxDBService.writeBatch(normalizedDataList);
+                } catch (Exception e) {
+                    log.warn("Failed to write data to InfluxDB (continuing anyway): {}", e.getMessage());
+                }
+            }
 
             log.info("Processed {} sensor data records", normalizedDataList.size());
 
@@ -69,7 +106,22 @@ public class IngestionService {
             
             kafkaProducerService.publishSensorData(normalized);
             timescaleDBService.insertSensorData(normalized);
-            minioService.storeSensorData(normalized);
+            
+            // MinIO storage is optional (non-blocking)
+            try {
+                minioService.storeSensorData(normalized);
+            } catch (Exception e) {
+                log.warn("Failed to archive data in MinIO (continuing anyway): {}", e.getMessage());
+            }
+
+            // InfluxDB storage is optional (non-blocking)
+            if (influxDBService != null) {
+                try {
+                    influxDBService.writeSensorData(normalized);
+                } catch (Exception e) {
+                    log.warn("Failed to write data to InfluxDB (continuing anyway): {}", e.getMessage());
+                }
+            }
 
             log.debug("Processed sensor data: asset={}, sensor={}", 
                 normalized.getAssetId(), normalized.getSensorId());

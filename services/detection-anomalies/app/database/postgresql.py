@@ -181,6 +181,8 @@ class PostgreSQLService:
             features_json_str = json.dumps(features) if features else '{}'
             metadata_json_str = json.dumps(metadata) if metadata else None
             
+            logger.debug(f"Inserting anomaly: asset={asset_id}, sensor={sensor_id}, score={final_score}, criticality={criticality_str}")
+            
             with self.get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
@@ -199,12 +201,16 @@ class PostgreSQLService:
                     )
                     result = cursor.fetchone()
                     anomaly_id = result[0] if result else None
-                    logger.debug(f"Anomalie insérée avec l'ID: {anomaly_id}")
+                    if anomaly_id:
+                        logger.info(f"Anomaly inserted successfully with ID: {anomaly_id}")
+                    else:
+                        logger.warning(f"Insert executed but no ID returned")
                     return anomaly_id
                     
         except Exception as e:
             logger.error(f"Erreur lors de l'insertion de l'anomalie: {e}", exc_info=True)
-            return None
+            # Re-raise to let caller know about the error
+            raise
     
     def get_anomalies(
         self,
@@ -270,7 +276,7 @@ class PostgreSQLService:
                 criticality, scores, features, metadata, created_at
             FROM anomaly_detections
             WHERE {where_clause}
-            ORDER BY timestamp DESC
+            ORDER BY created_at DESC, id DESC
             LIMIT %s OFFSET %s
             """
             params.extend([limit, offset])

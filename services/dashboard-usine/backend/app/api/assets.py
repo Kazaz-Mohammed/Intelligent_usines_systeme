@@ -62,7 +62,7 @@ async def get_assets(
             params.append(status)
         
         if asset_type:
-            query += f" AND type = ${len(params) + 1}"
+            query += f" AND asset_type = ${len(params) + 1}"
             params.append(asset_type)
         
         query += f" LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}"
@@ -75,16 +75,27 @@ async def get_assets(
         assets = []
         for row in rows:
             try:
-                # Handle coordinates - it might be a dict or JSONB string
+                # Handle coordinates - it might be a dict, JSONB, or stored in metadata
                 coordinates = row.get('coordinates')
+                if coordinates is None and row.get('metadata'):
+                    # Try to get coordinates from metadata if not in dedicated column
+                    metadata = row.get('metadata')
+                    if isinstance(metadata, dict) and 'coordinates' in metadata:
+                        coordinates = metadata.get('coordinates')
                 if isinstance(coordinates, str):
                     import json
                     coordinates = json.loads(coordinates)
+                # Ensure coordinates format is {lat, lon}
+                if coordinates and isinstance(coordinates, dict):
+                    if 'lat' in coordinates and 'lon' in coordinates:
+                        coordinates = {'lat': float(coordinates['lat']), 'lon': float(coordinates['lon'])}
+                    else:
+                        coordinates = None
                 
                 asset = Asset(
                     id=row.get('asset_id') or row.get('id', ''),
                     name=row.get('name', 'Unknown'),
-                    type=row.get('type', 'unknown'),
+                    type=row.get('asset_type', row.get('type', 'unknown')),
                     status=row.get('status', 'offline'),
                     location=row.get('location'),
                     coordinates=coordinates,
@@ -104,7 +115,7 @@ async def get_assets(
             count_query += f" AND status = ${len(count_params) + 1}"
             count_params.append(status)
         if asset_type:
-            count_query += f" AND type = ${len(count_params) + 1}"
+            count_query += f" AND asset_type = ${len(count_params) + 1}"
             count_params.append(asset_type)
         
         total = await db.fetchval(count_query, *count_params) if count_params else await db.fetchval("SELECT COUNT(*) FROM assets_metadata")
@@ -146,7 +157,7 @@ async def get_asset_detail(
         asset = Asset(
             id=row['asset_id'],
             name=row['name'],
-            type=row['type'],
+            type=row.get('asset_type', 'unknown'),
             status=row['status'],
             location=row.get('location'),
             metadata=row.get('metadata'),

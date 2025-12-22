@@ -1,5 +1,6 @@
 # Dockerfile pour le service Extraction Features
-FROM python:3.11-slim
+# Using Python 3.10 for better compatibility with tsfresh/dask/pandas
+FROM python:3.10-slim
 
 # Métadonnées
 LABEL maintainer="predictive-maintenance-team"

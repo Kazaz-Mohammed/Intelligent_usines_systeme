@@ -24,15 +24,24 @@ export default function AnomaliesPage() {
   })
 
   const filteredAnomalies = useMemo(() => {
+    if (!anomalies || !Array.isArray(anomalies)) return []
     if (severityFilter === "all") return anomalies
     return anomalies.filter((a) => a.severity === severityFilter)
   }, [anomalies, severityFilter])
 
-  const criticalCount = useMemo(() => anomalies.filter((a) => a.severity === "critical").length, [anomalies])
-  const highCount = useMemo(() => anomalies.filter((a) => a.severity === "high").length, [anomalies])
+  const criticalCount = useMemo(() => {
+    if (!anomalies || !Array.isArray(anomalies)) return 0
+    return anomalies.filter((a) => a.severity === "critical").length
+  }, [anomalies])
+  
+  const highCount = useMemo(() => {
+    if (!anomalies || !Array.isArray(anomalies)) return 0
+    return anomalies.filter((a) => a.severity === "high").length
+  }, [anomalies])
 
   // Compute heatmap data at the top level (hooks must not be inside JSX)
   const heatmapData = useMemo(() => {
+    if (!anomalies || !Array.isArray(anomalies)) return []
     const assetSeverityMap: Record<string, Record<string, number>> = {}
     anomalies.forEach((anomaly) => {
       if (!assetSeverityMap[anomaly.asset_id]) {
@@ -72,7 +81,7 @@ export default function AnomaliesPage() {
             <CardTitle className="text-base">Total Anomalies</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-16" /> : <p className="text-3xl font-bold">{anomalies.length}</p>}
+            {isLoading ? <Skeleton className="h-8 w-16" /> : <p className="text-3xl font-bold">{anomalies?.length || 0}</p>}
           </CardContent>
         </Card>
         <Card className="border-border">
@@ -94,7 +103,7 @@ export default function AnomaliesPage() {
       </div>
 
       {/* Anomaly Heatmap */}
-      {!isLoading && anomalies.length > 0 && (
+      {!isLoading && anomalies && anomalies.length > 0 && (
         <Card className="border-border">
           <CardHeader>
             <CardTitle>Anomaly Distribution</CardTitle>
@@ -142,7 +151,7 @@ export default function AnomaliesPage() {
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
-                ) : filteredAnomalies.length === 0 ? (
+                ) : !filteredAnomalies || filteredAnomalies.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8">
                       <p className="text-muted-foreground">No anomalies found</p>

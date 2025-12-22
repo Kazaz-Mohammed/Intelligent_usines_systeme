@@ -23,8 +23,21 @@ export function useAnomalies(params?: {
     try {
       setIsLoading(true)
       const data = await apiClient.getAnomalies({ ...params, limit: params?.limit || 100 })
-      setAnomalies(data.data)
-      setTotal(data.total)
+      const fetchedAnomalies = data.anomalies || []
+      
+      // Debug logging to see what we're getting
+      if (fetchedAnomalies.length > 0) {
+        console.log(`[useAnomalies] Fetched ${fetchedAnomalies.length} anomalies. Latest:`, {
+          timestamp: fetchedAnomalies[0]?.timestamp,
+          asset_id: fetchedAnomalies[0]?.asset_id,
+          is_anomaly: fetchedAnomalies[0]?.is_anomaly
+        })
+      } else {
+        console.log(`[useAnomalies] No anomalies returned. Params:`, params)
+      }
+      
+      setAnomalies(fetchedAnomalies)
+      setTotal(data.total || 0)
       setError(null)
     } catch (err) {
       console.error("Failed to fetch anomalies:", err)

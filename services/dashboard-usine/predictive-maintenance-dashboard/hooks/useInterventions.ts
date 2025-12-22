@@ -19,8 +19,8 @@ export function useInterventions(params?: {
     try {
       setIsLoading(true)
       const data = await apiClient.getInterventions({ ...params, limit: params?.limit || 100 })
-      setInterventions(data.data)
-      setTotal(data.total)
+      setInterventions(data.interventions || [])
+      setTotal(data.total || 0)
       setError(null)
     } catch (err) {
       console.error("Failed to fetch interventions:", err)

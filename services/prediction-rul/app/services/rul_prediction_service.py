@@ -293,11 +293,55 @@ class RULPredictionService:
         feature_values = list(request.features.values())
         feature_array = np.array(feature_values).reshape(1, -1)
         
-        # Si sequence_data fourni, l'utiliser
-        if request.sequence_data:
+        # Aligner les features avec la taille attendue par les modèles
+        # Les modèles peuvent avoir été entraînés avec différentes tailles (88, 90, 92)
+        # On aligne en prenant la taille attendue du premier modèle disponible
+        expected_size = None
+        for name, model in self.models.items():
+            if self._is_model_trained(model):
+                # XGBoost models
+                if hasattr(model, 'model') and hasattr(model.model, 'n_features_in_'):
+                    expected_size = model.model.n_features_in_
+                    break
+                # LSTM/GRU/TCN models
+                elif hasattr(model, 'input_size'):
+                    expected_size = model.input_size
+                    break
+                # Direct XGBoost model
+                elif hasattr(model, 'n_features_in_'):
+                    expected_size = model.n_features_in_
+                    break
+        
+        if expected_size is None:
+            # Si on ne peut pas déterminer, utiliser la taille actuelle
+            expected_size = feature_array.shape[1]
+            logger.warning(f"Could not determine expected feature size, using current size: {expected_size}")
+        
+        # Aligner les features: padding avec 0 si trop court, troncature si trop long
+        current_size = feature_array.shape[1]
+        if current_size < expected_size:
+            # Padding avec des zéros
+            padding = np.zeros((1, expected_size - current_size))
+            feature_array = np.hstack([feature_array, padding])
+            logger.debug(f"Features padded from {current_size} to {expected_size}")
+        elif current_size > expected_size:
+            # Troncature
+            feature_array = feature_array[:, :expected_size]
+            logger.debug(f"Features truncated from {current_size} to {expected_size}")
+        
+        # Si sequence_data fourni, l'utiliser (optional field)
+        sequence_data = getattr(request, 'sequence_data', None)
+        if sequence_data:
             sequence_array = np.array([
-                list(seq.values()) for seq in request.sequence_data
+                list(seq.values()) for seq in sequence_data
             ])
+            # Aligner aussi les séquences
+            if sequence_array.shape[2] != expected_size:
+                if sequence_array.shape[2] < expected_size:
+                    padding = np.zeros((sequence_array.shape[0], sequence_array.shape[1], expected_size - sequence_array.shape[2]))
+                    sequence_array = np.concatenate([sequence_array, padding], axis=2)
+                else:
+                    sequence_array = sequence_array[:, :, :expected_size]
         else:
             # Créer une séquence à partir des features actuelles
             sequence_array = feature_array
@@ -321,9 +365,56 @@ class RULPredictionService:
         
         for name, model in models_to_use.items():
             try:
+                # Try prediction first
                 pred = model.predict(sequence_array)
                 predictions[name] = float(pred[0]) if len(pred) > 0 else 0.0
                 model_scores[name] = predictions[name]
+            except ValueError as e:
+                # Handle feature shape mismatch - align and retry
+                if "Feature shape mismatch" in str(e) or "feature" in str(e).lower():
+                    # Extract expected size from error or model
+                    model_expected_size = None
+                    if hasattr(model, 'model') and hasattr(model.model, 'n_features_in_'):
+                        model_expected_size = model.model.n_features_in_
+                    elif hasattr(model, 'input_size'):
+                        model_expected_size = model.input_size
+                    elif hasattr(model, 'n_features_in_'):
+                        model_expected_size = model.n_features_in_
+                    
+                    if model_expected_size:
+                        # Align sequence_array to expected size
+                        current_size = sequence_array.shape[-1]
+                        if current_size < model_expected_size:
+                            # Pad with zeros
+                            if len(sequence_array.shape) == 2:
+                                padding = np.zeros((sequence_array.shape[0], model_expected_size - current_size))
+                                sequence_array = np.hstack([sequence_array, padding])
+                            else:  # 3D
+                                padding = np.zeros((sequence_array.shape[0], sequence_array.shape[1], model_expected_size - current_size))
+                                sequence_array = np.concatenate([sequence_array, padding], axis=2)
+                            logger.debug(f"Aligned features for {name}: {current_size} -> {model_expected_size} (padded)")
+                        elif current_size > model_expected_size:
+                            # Truncate
+                            if len(sequence_array.shape) == 2:
+                                sequence_array = sequence_array[:, :model_expected_size]
+                            else:  # 3D
+                                sequence_array = sequence_array[:, :, :model_expected_size]
+                            logger.debug(f"Aligned features for {name}: {current_size} -> {model_expected_size} (truncated)")
+                        
+                        # Retry prediction
+                        try:
+                            pred = model.predict(sequence_array)
+                            predictions[name] = float(pred[0]) if len(pred) > 0 else 0.0
+                            model_scores[name] = predictions[name]
+                        except Exception as e2:
+                            logger.warning(f"Erreur lors de la prédiction avec {name} après alignement: {e2}")
+                            continue
+                    else:
+                        logger.warning(f"Erreur lors de la prédiction avec {name}: {e} (could not determine expected size)")
+                        continue
+                else:
+                    logger.warning(f"Erreur lors de la prédiction avec {name}: {e}")
+                    continue
             except Exception as e:
                 logger.warning(f"Erreur lors de la prédiction avec {name}: {e}")
                 continue

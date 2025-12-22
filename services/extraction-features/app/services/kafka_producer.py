@@ -67,9 +67,9 @@ class KafkaProducerService:
             # Flush pour garantir la livraison
             self.producer.poll(0)
             
-            # Get asset_id from metadata
-            asset_id = feature.metadata.get("asset_id", "unknown")
-            logger.debug(f"Feature publiée: {feature.name} pour {asset_id}")
+            # Get asset_id from feature
+            asset_id = feature.asset_id
+            logger.debug(f"Feature publiée: {feature.feature_name} pour {asset_id}")
             
         except Exception as e:
             logger.error(f"Erreur lors de la publication: {e}", exc_info=True)

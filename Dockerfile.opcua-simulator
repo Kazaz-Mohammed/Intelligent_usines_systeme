@@ -1,0 +1,19 @@
+# Dockerfile for OPC UA Simulator
+# Simulates sensor data from CMAPSS engines as OPC UA nodes
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install OPC UA library
+RUN pip install --no-cache-dir opcua
+
+# Copy the simulator script
+COPY scripts/opcua_server_simulator.py .
+
+# Expose OPC UA port
+EXPOSE 4840
+
+# Run the simulator
+CMD ["python", "opcua_server_simulator.py"]
+

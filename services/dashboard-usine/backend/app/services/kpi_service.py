@@ -25,7 +25,7 @@ class KPIService:
         try:
             start_date = datetime.now() - timedelta(days=days)
             
-            # Get failure events (anomalies with critical criticality or maintenance events)
+            # Get failure events (anomalies with high or critical criticality)
             # Note: Uses anomaly_detections table from detection-anomalies service
             query = """
                 SELECT COUNT(*) as failure_count,
@@ -34,7 +34,7 @@ class KPIService:
                 FROM (
                     SELECT timestamp
                     FROM anomaly_detections
-                    WHERE criticality = 'critical' AND is_anomaly = true
+                    WHERE criticality IN ('high', 'critical') AND is_anomaly = true
                     AND timestamp >= $1
                     """ + (f"AND asset_id = $2" if asset_id else "") + """
                 ) failures
@@ -75,15 +75,19 @@ class KPIService:
             start_date = datetime.now() - timedelta(days=days)
             
             # Get repair events from interventions
+            # Note: Using started_at/completed_at or duration_hours
             query = """
                 SELECT 
                     COUNT(*) as repair_count,
-                    SUM(EXTRACT(EPOCH FROM (actual_end - actual_start)) / 3600) as total_repair_time
+                    COALESCE(
+                        SUM(EXTRACT(EPOCH FROM (completed_at - started_at)) / 3600),
+                        SUM(duration_hours),
+                        0
+                    ) as total_repair_time
                 FROM interventions
                 WHERE status = 'completed'
-                AND actual_start IS NOT NULL
-                AND actual_end IS NOT NULL
-                AND actual_start >= $1
+                AND (started_at IS NOT NULL AND completed_at IS NOT NULL OR duration_hours IS NOT NULL)
+                AND (started_at >= $1 OR scheduled_date >= $1)
                 """ + (f"AND asset_id = $2" if asset_id else "") + """
             """
             
@@ -122,13 +126,18 @@ class KPIService:
             start_date = datetime.now() - timedelta(days=days)
             
             # Calculate downtime from maintenance interventions
+            # Using completed_at and started_at columns (or duration_hours as fallback)
             query = """
                 SELECT 
-                    SUM(EXTRACT(EPOCH FROM (COALESCE(actual_end, scheduled_end) - COALESCE(actual_start, scheduled_start))) / 3600) as downtime_hours
+                    SUM(COALESCE(
+                        EXTRACT(EPOCH FROM (completed_at - started_at)) / 3600,
+                        duration_hours,
+                        0
+                    )) as downtime_hours
                 FROM interventions
                 WHERE asset_id = $1
                 AND (status = 'in_progress' OR status = 'completed')
-                AND scheduled_start >= $2
+                AND created_at >= $2
             """
             
             result = await self.db.fetchrow(query, asset_id, start_date)
@@ -162,22 +171,30 @@ class KPIService:
             if asset_id:
                 query = """
                     SELECT 
-                        SUM(EXTRACT(EPOCH FROM (COALESCE(actual_end, scheduled_end) - COALESCE(actual_start, scheduled_start))) / 3600) as downtime_hours
+                        SUM(COALESCE(
+                            EXTRACT(EPOCH FROM (completed_at - started_at)) / 3600,
+                            duration_hours,
+                            0
+                        )) as downtime_hours
                     FROM interventions
                     WHERE asset_id = $1
                     AND (status = 'in_progress' OR status = 'completed')
-                    AND scheduled_start >= $2
+                    AND created_at >= $2
                 """
                 result = await self.db.fetchrow(query, asset_id, start_date)
             else:
                 # Calculate for all assets
                 query = """
                     SELECT 
-                        SUM(EXTRACT(EPOCH FROM (COALESCE(actual_end, scheduled_end) - COALESCE(actual_start, scheduled_start))) / 3600) as downtime_hours,
+                        SUM(COALESCE(
+                            EXTRACT(EPOCH FROM (completed_at - started_at)) / 3600,
+                            duration_hours,
+                            0
+                        )) as downtime_hours,
                         COUNT(DISTINCT asset_id) as asset_count
                     FROM interventions
                     WHERE (status = 'in_progress' OR status = 'completed')
-                    AND scheduled_start >= $1
+                    AND created_at >= $1
                 """
                 result = await self.db.fetchrow(query, start_date)
             
@@ -209,11 +226,18 @@ class KPIService:
                 "SELECT COUNT(*) FROM anomaly_detections WHERE is_anomaly = true AND timestamp >= $1",
                 start_date
             ) or 0
-            # Reliability decreases with more anomalies (simple model)
-            # 0 anomalies = 100%, 10+ anomalies = ~50%
-            reliability = round(max(50.0, 100.0 - (anomaly_count * 5)), 2)
+            # Reliability decreases with more anomalies (scaled formula)
+            # Use logarithmic scale to prevent extreme drops with many anomalies
+            # 0 anomalies = 100%, 100 anomalies = ~70%, 1000 anomalies = ~40%
+            import math
+            if anomaly_count > 0:
+                # Logarithmic decay: reliability = 100 * e^(-anomaly_count/200)
+                reliability = round(max(20.0, 100.0 * math.exp(-anomaly_count / 200)), 2)
+            else:
+                reliability = 100.0
+            logger.info(f"Reliability calculation: {anomaly_count} anomalies -> {reliability}%")
         except Exception as e:
-            logger.debug(f"Could not calculate reliability: {e}")
+            logger.error(f"Could not calculate reliability: {e}")
             reliability = 100.0
         
         return KPISummary(
@@ -222,7 +246,7 @@ class KPIService:
             oee=oee,
             availability=availability,
             reliability=reliability,
-            timestamp=datetime.now()
+            period_days=days
         )
     
     async def save_kpi(self, kpi: KPI):

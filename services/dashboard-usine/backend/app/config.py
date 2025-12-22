@@ -2,7 +2,8 @@
 Configuration du service Dashboard Usine
 """
 from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, List, Union
 
 
 class Settings(BaseSettings):
@@ -39,7 +40,15 @@ class Settings(BaseSettings):
     
     # Frontend
     frontend_url: str = "http://localhost:3000"
-    cors_origins: list = ["http://localhost:3000", "http://localhost:8091"]
+    cors_origins: Union[str, List[str]] = "http://localhost:3000,http://localhost:8091"
+    
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from comma-separated string or list"""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
+        return v
     
     # Export
     export_max_records: int = 10000

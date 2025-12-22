@@ -165,36 +165,85 @@ export default function ReportsPage() {
           {
             title: "Maintenance Summary",
             description: "Overview of completed and planned maintenance activities",
+            dataType: "interventions",
+            reportType: "summary",
           },
           {
             title: "Anomaly Report",
             description: "Detailed anomaly detection and analysis",
+            dataType: "anomalies",
+            reportType: "detailed",
           },
           {
             title: "RUL Predictions",
             description: "Remaining Useful Life predictions and trends",
+            dataType: "rul",
+            reportType: "detailed",
           },
           {
             title: "Equipment Performance",
             description: "Overall equipment effectiveness and KPI metrics",
+            dataType: "all",
+            reportType: "kpi",
           },
-        ].map((report) => (
-          <Card
-            key={report.title}
-            className="border-border cursor-pointer hover:border-primary hover:shadow-lg transition-all"
-          >
-            <CardHeader>
-              <CardTitle className="text-base">{report.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">{report.description}</p>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <Filter className="h-3 w-3" />
-                Generate
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        ].map((report) => {
+          const handleGenerate = async () => {
+            try {
+              setIsExporting(true)
+              // Set the data type for CSV export
+              setDataType(report.dataType)
+              
+              // Generate PDF report
+              const blob = await apiClient.exportPDF({
+                asset_id: assetFilter !== "all" ? assetFilter : undefined,
+                start_date: startDate,
+                end_date: endDate,
+                report_type: report.reportType,
+              })
+              
+              // Create download link
+              const url = window.URL.createObjectURL(blob)
+              const a = document.createElement("a")
+              a.href = url
+              a.download = `${report.title.toLowerCase().replace(/\s+/g, "_")}_${startDate}_${endDate}.pdf`
+              document.body.appendChild(a)
+              a.click()
+              window.URL.revokeObjectURL(url)
+              document.body.removeChild(a)
+              
+              toast.success(`${report.title} generated successfully`)
+            } catch (error) {
+              console.error("Report generation failed:", error)
+              toast.error(`Failed to generate ${report.title}`)
+            } finally {
+              setIsExporting(false)
+            }
+          }
+
+          return (
+            <Card
+              key={report.title}
+              className="border-border cursor-pointer hover:border-primary hover:shadow-lg transition-all"
+            >
+              <CardHeader>
+                <CardTitle className="text-base">{report.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">{report.description}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2 bg-transparent"
+                  onClick={handleGenerate}
+                  disabled={isExporting}
+                >
+                  <Filter className="h-3 w-3" />
+                  {isExporting ? "Generating..." : "Generate"}
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )

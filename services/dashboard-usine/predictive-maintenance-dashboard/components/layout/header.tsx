@@ -66,40 +66,46 @@ export function Header() {
     const oneDayAgo = new Date()
     oneDayAgo.setDate(oneDayAgo.getDate() - 1)
     
-    anomalies
-      .filter((a) => {
-        const timestamp = new Date(a.timestamp)
-        return timestamp > oneDayAgo && a.is_anomaly
-      })
-      .slice(0, 5)
-      .forEach((anomaly) => {
-        items.push({
-          id: `anomaly-${anomaly.id || anomaly.asset_id}-${anomaly.timestamp}`,
-          type: "anomaly",
-          title: `Anomaly Detected: ${anomaly.asset_id}`,
-          message: `Criticality: ${anomaly.severity || anomaly.criticality || "unknown"}`,
-          timestamp: new Date(anomaly.timestamp).toLocaleString(),
-          severity: anomaly.severity || anomaly.criticality,
-          assetId: anomaly.asset_id,
-          link: `/dashboard/anomalies?asset_id=${anomaly.asset_id}`,
+    // Guard against undefined anomalies
+    if (anomalies && Array.isArray(anomalies)) {
+      anomalies
+        .filter((a) => {
+          const timestamp = new Date(a.timestamp)
+          return timestamp > oneDayAgo && a.is_anomaly
         })
-      })
+        .slice(0, 5)
+        .forEach((anomaly) => {
+          items.push({
+            id: `anomaly-${anomaly.id || anomaly.asset_id}-${anomaly.timestamp}`,
+            type: "anomaly",
+            title: `Anomaly Detected: ${anomaly.asset_id}`,
+            message: `Criticality: ${anomaly.severity || anomaly.criticality || "unknown"}`,
+            timestamp: new Date(anomaly.timestamp).toLocaleString(),
+            severity: anomaly.severity || anomaly.criticality,
+            assetId: anomaly.asset_id,
+            link: `/dashboard/anomalies?asset_id=${anomaly.asset_id}`,
+          })
+        })
+    }
     
     // Add low RUL predictions (< 180 hours)
-    predictions
-      .filter((p) => p.rul_prediction < 180)
-      .slice(0, 5)
-      .forEach((pred) => {
-        items.push({
-          id: `rul-${pred.id || pred.asset_id}-${pred.timestamp}`,
-          type: "rul",
-          title: `Low RUL: ${pred.asset_id}`,
-          message: `RUL: ${pred.rul_prediction.toFixed(0)} hours remaining`,
-          timestamp: new Date(pred.timestamp).toLocaleString(),
-          assetId: pred.asset_id,
-          link: `/dashboard/rul?asset_id=${pred.asset_id}`,
+    // Guard against undefined predictions
+    if (predictions && Array.isArray(predictions)) {
+      predictions
+        .filter((p) => p.rul_prediction < 180)
+        .slice(0, 5)
+        .forEach((pred) => {
+          items.push({
+            id: `rul-${pred.id || pred.asset_id}-${pred.timestamp}`,
+            type: "rul",
+            title: `Low RUL: ${pred.asset_id}`,
+            message: `RUL: ${pred.rul_prediction.toFixed(0)} hours remaining`,
+            timestamp: new Date(pred.timestamp).toLocaleString(),
+            assetId: pred.asset_id,
+            link: `/dashboard/rul?asset_id=${pred.asset_id}`,
+          })
         })
-      })
+    }
     
     // Sort by timestamp (newest first)
     items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

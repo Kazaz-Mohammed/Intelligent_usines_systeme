@@ -17,12 +17,14 @@ export default function RULPage() {
   })
 
   const filteredPredictions = useMemo(() => {
+    if (!predictions || !Array.isArray(predictions)) return []
     if (selectedAsset === "all") return predictions
     return predictions.filter((p) => p.asset_id === selectedAsset)
   }, [predictions, selectedAsset])
 
   // Get unique asset IDs for filter dropdown
   const assetIds = useMemo(() => {
+    if (!predictions || !Array.isArray(predictions)) return []
     const unique = Array.from(new Set(predictions.map((p) => p.asset_id)))
     return unique
   }, [predictions])
@@ -49,7 +51,7 @@ export default function RULPage() {
       )}
 
       {/* Trend Chart */}
-      {selectedAsset !== "all" && filteredPredictions.length > 0 && (
+      {selectedAsset !== "all" && filteredPredictions && filteredPredictions.length > 0 && (
         <RULTrendChart
           data={filteredPredictions.map((p) => ({
             date: new Date(p.timestamp).toLocaleDateString(),
@@ -101,7 +103,7 @@ export default function RULPage() {
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
-                ) : filteredPredictions.length === 0 ? (
+                ) : !filteredPredictions || filteredPredictions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <p className="text-muted-foreground">No RUL predictions found</p>

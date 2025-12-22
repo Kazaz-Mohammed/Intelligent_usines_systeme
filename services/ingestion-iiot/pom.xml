@@ -27,6 +27,7 @@
         <milo.version>0.6.8</milo.version>
         <postgresql.version>42.7.1</postgresql.version>
         <minio.version>8.5.7</minio.version>
+        <influxdb.version>6.12.0</influxdb.version>
     </properties>
 
     <dependencies>
@@ -83,6 +84,13 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${minio.version}</version>
+        </dependency>
+
+        <!-- InfluxDB -->
+        <dependency>
+            <groupId>com.influxdb</groupId>
+            <artifactId>influxdb-client-java</artifactId>
+            <version>${influxdb.version}</version>
         </dependency>
 
         <!-- JSON -->

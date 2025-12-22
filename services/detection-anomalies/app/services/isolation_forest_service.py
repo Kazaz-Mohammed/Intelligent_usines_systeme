@@ -237,15 +237,26 @@ class IsolationForestService:
             # Créer un array avec les features dans le bon ordre
             X = np.array([[features.get(name, 0.0) for name in self.feature_names]])
             
-            # Prédire
-            score = self.predict_scores(X)[0]
+            # Get raw decision function score
+            # Isolation Forest: negative = anomaly, positive = normal
+            raw_score = self.model.decision_function(X)[0]
+            
+            # Convert to anomaly score (0-1 scale, higher = more anomalous)
+            # Use sigmoid-like transformation centered around 0
+            # Negative raw_score -> high anomaly score
+            score = 1.0 / (1.0 + np.exp(raw_score * 5))  # Scale factor of 5 for sensitivity
+            
+            # Predict (-1 = anomaly, 1 = normal)
             prediction = self.predict(X)[0]
             
             # Utiliser le seuil fourni ou celui du modèle
             if threshold is None:
                 threshold = self.contamination
             
-            is_anomaly = score >= threshold or prediction == 1
+            # FIX: prediction == -1 means anomaly (not 1!)
+            is_anomaly = score >= threshold or prediction == -1
+            
+            logger.debug(f"Isolation Forest: raw_score={raw_score:.4f}, score={score:.4f}, prediction={prediction}, is_anomaly={is_anomaly}")
             
             return {
                 "score": float(score),

@@ -21,8 +21,8 @@ export function useRUL(params?: {
     try {
       setIsLoading(true)
       const data = await apiClient.getRULPredictions({ ...params, limit: params?.limit || 100 })
-      setPredictions(data.data)
-      setTotal(data.total)
+      setPredictions(data.predictions || [])
+      setTotal(data.total || 0)
       setError(null)
     } catch (err) {
       console.error("Failed to fetch RUL predictions:", err)

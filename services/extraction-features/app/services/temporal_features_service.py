@@ -63,20 +63,28 @@ class TemporalFeaturesService:
                 feature_value = self._calculate_feature(values, feature_name)
                 
                 if feature_value is not None and not np.isnan(feature_value) and not np.isinf(feature_value):
-                    import uuid
-                    features.append(ExtractedFeature(
-                        feature_id=str(uuid.uuid4()),
-                        name=feature_name,
-                        value=float(feature_value),
-                        feature_type="temporal",
-                        metadata={
-                            "timestamp": base_timestamp.isoformat(),
-                            "asset_id": asset_id,
-                            "sensor_id": sensor_id,
-                            "window_size": len(data),
-                            "calculation_method": "temporal_features_service"
-                        }
-                    ))
+                    try:
+                        feature = ExtractedFeature(
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=feature_name,
+                            feature_value=float(feature_value),
+                            feature_type="temporal",
+                            metadata={
+                                "window_size": len(data),
+                                "calculation_method": "temporal_features_service"
+                            }
+                        )
+                        features.append(feature)
+                    except Exception as create_error:
+                        logger.error(
+                            f"Erreur lors de la création de ExtractedFeature pour {feature_name}: {create_error}. "
+                            f"Values: timestamp={base_timestamp}, asset_id={asset_id}, sensor_id={sensor_id}, "
+                            f"feature_name={feature_name}, feature_value={feature_value}",
+                            exc_info=True
+                        )
+                        continue
             except Exception as e:
                 logger.error(f"Erreur lors du calcul de la feature {feature_name}: {e}", exc_info=True)
                 continue
@@ -242,16 +250,14 @@ class TemporalFeaturesService:
                     feature_value = self._calculate_feature(window_values, feature_name)
                     
                     if feature_value is not None and not np.isnan(feature_value) and not np.isinf(feature_value):
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"{feature_name}_rolling_{window_size}",
-                            value=float(feature_value),
+                            timestamp=window_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"{feature_name}_rolling_{window_size}",
+                            feature_value=float(feature_value),
                             feature_type="temporal",
                             metadata={
-                                "timestamp": window_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": window_size,
                                 "calculation_method": "rolling_features",
                                 "base_feature": feature_name

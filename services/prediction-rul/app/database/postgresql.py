@@ -109,6 +109,7 @@ class PostgreSQLService:
                 cursor.execute(create_table_sql)
                 
                 # Add sensor_id column if it doesn't exist (migration for existing tables)
+                # This must be done before creating indexes
                 try:
                     cursor.execute("""
                         DO $$ 
@@ -121,18 +122,35 @@ class PostgreSQLService:
                             END IF;
                         END $$;
                     """)
+                    # Commit the column addition immediately
+                    conn.commit()
                 except Exception as e:
-                    logger.debug(f"Column sensor_id check: {e}")
+                    logger.warning(f"Column sensor_id migration: {e}")
+                    conn.rollback()
                 
                 # Create indexes (only if they don't exist)
+                # Only create sensor_id indexes if the column exists
                 indexes = [
                     "CREATE INDEX IF NOT EXISTS idx_rul_asset_id ON rul_predictions(asset_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_rul_sensor_id ON rul_predictions(sensor_id);",
                     "CREATE INDEX IF NOT EXISTS idx_rul_timestamp ON rul_predictions(timestamp);",
                     "CREATE INDEX IF NOT EXISTS idx_rul_model_used ON rul_predictions(model_used);",
-                    "CREATE INDEX IF NOT EXISTS idx_rul_asset_timestamp ON rul_predictions(asset_id, timestamp DESC);",
-                    "CREATE INDEX IF NOT EXISTS idx_rul_sensor_timestamp ON rul_predictions(sensor_id, timestamp DESC);"
+                    "CREATE INDEX IF NOT EXISTS idx_rul_asset_timestamp ON rul_predictions(asset_id, timestamp DESC);"
                 ]
+                
+                # Check if sensor_id exists before creating indexes on it
+                cursor.execute("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='rul_predictions' AND column_name='sensor_id'
+                    ) as column_exists;
+                """)
+                sensor_id_exists = cursor.fetchone()[0]
+                
+                if sensor_id_exists:
+                    indexes.extend([
+                        "CREATE INDEX IF NOT EXISTS idx_rul_sensor_id ON rul_predictions(sensor_id);",
+                        "CREATE INDEX IF NOT EXISTS idx_rul_sensor_timestamp ON rul_predictions(sensor_id, timestamp DESC);"
+                    ])
                 
                 for index_sql in indexes:
                     try:
@@ -258,10 +276,10 @@ class PostgreSQLService:
             rul_lower as confidence_interval_lower, 
             rul_upper as confidence_interval_upper, 
             confidence_interval as confidence_level,
-            model_used, model_version, features, metadata
+            model_used, features, metadata
         FROM rul_predictions
         {where_clause}
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC, id DESC
         LIMIT %s OFFSET %s;
         """
         params.extend([limit, offset])
@@ -413,7 +431,7 @@ class PostgreSQLService:
             model_used, model_version, features, metadata
         FROM rul_predictions
         {where_clause}
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC, id DESC
         LIMIT 1;
         """
         

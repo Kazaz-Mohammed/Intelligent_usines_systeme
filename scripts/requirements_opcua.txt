@@ -1,0 +1,5 @@
+# Requirements for OPC UA Server Simulator
+# Install with: pip install -r scripts/requirements_opcua.txt
+
+opcua==0.98.13
+

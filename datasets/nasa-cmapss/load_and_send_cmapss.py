@@ -208,7 +208,7 @@ def send_cmapss_data(
             if delay_ms > 0 and cycle_idx % 10 == 0:
                 time.sleep(delay_ms / 1000.0)
         
-        print(f" ✓ ({total_sent} messages sent)")
+        print(f" [OK] ({total_sent} messages sent)")
         
         # Flush periodically
         if units_processed % 5 == 0:
@@ -216,8 +216,8 @@ def send_cmapss_data(
     
     # Final flush
     producer.flush(10)
-    print(f"\n✅ Total messages sent: {total_sent}")
-    print(f"✅ Processed {units_processed} units from {dataset_name}")
+    print(f"\n[SUCCESS] Total messages sent: {total_sent}")
+    print(f"[SUCCESS] Processed {units_processed} units from {dataset_name}")
 
 
 def main():
@@ -284,7 +284,7 @@ def main():
         delay_ms=args.delay
     )
     
-    print(f"\n✅ Done! Check your microservices logs to see data being processed.")
+    print(f"\n[SUCCESS] Done! Check your microservices logs to see data being processed.")
 
 
 if __name__ == "__main__":

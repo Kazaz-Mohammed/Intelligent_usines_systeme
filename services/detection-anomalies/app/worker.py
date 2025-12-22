@@ -209,7 +209,18 @@ class AnomalyDetectionWorker:
             )
             
             # Détecter l'anomalie
-            result = self.anomaly_detection_service.detect_anomaly(request)
+            try:
+                result = self.anomaly_detection_service.detect_anomaly(request)
+                
+                # ALWAYS log detection result at INFO level for debugging
+                logger.info(
+                    f"Detection result for {asset_id}/{sensor_id}: "
+                    f"score={result.final_score:.4f}, is_anomaly={result.is_anomaly}, "
+                    f"scores=[{', '.join(f'{s.model_name}:{s.score:.3f}' for s in result.scores)}]"
+                )
+            except Exception as detect_error:
+                logger.error(f"Detection FAILED for {asset_id}/{sensor_id}: {detect_error}", exc_info=True)
+                return
             
             # Publier le résultat sur Kafka
             self.kafka_producer.publish_anomaly(result)
@@ -217,17 +228,21 @@ class AnomalyDetectionWorker:
             # Journaliser l'anomalie dans la base de données si détectée
             if result.is_anomaly:
                 try:
-                    self.postgresql_service.insert_anomaly(result)
+                    anomaly_id = self.postgresql_service.insert_anomaly(result)
+                    if anomaly_id:
+                        logger.info(f"[DB] Anomaly ID={anomaly_id} saved to database for {asset_id}")
+                    else:
+                        logger.error(f"[DB] FAILED to save anomaly for {asset_id} - insert_anomaly returned None")
                 except Exception as e:
-                    logger.warning(f"Impossible de journaliser l'anomalie dans la base de données: {e}")
+                    logger.error(f"[DB] FAILED to save anomaly for {asset_id}: {e}", exc_info=True)
                 
                 logger.warning(
-                    f"Anomalie détectée: {asset_id} "
+                    f"!!! ANOMALY DETECTED: {asset_id} "
                     f"(score={result.final_score:.3f}, "
                     f"criticality={result.criticality.value})"
                 )
             else:
-                logger.debug(f"Pas d'anomalie: {asset_id} (score={result.final_score:.3f})")
+                logger.info(f"No anomaly: {asset_id} (score={result.final_score:.4f} < threshold)")
                 
         except Exception as e:
             logger.error(f"Erreur lors du traitement de la feature: {e}", exc_info=True)

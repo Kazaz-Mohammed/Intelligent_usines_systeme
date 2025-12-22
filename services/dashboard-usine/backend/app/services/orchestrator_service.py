@@ -88,7 +88,7 @@ class OrchestratorService:
                 query += f" AND status = ${len(params_list) + 1}"
                 params_list.append(status)
             
-            query += f" ORDER BY scheduled_start DESC LIMIT ${len(params_list) + 1} OFFSET ${len(params_list) + 2}"
+            query += f" ORDER BY COALESCE(scheduled_date, created_at) DESC LIMIT ${len(params_list) + 1} OFFSET ${len(params_list) + 2}"
             params_list.extend([limit, offset])
             
             rows = await db.fetch(query, *params_list)
@@ -110,16 +110,16 @@ class OrchestratorService:
                 interventions.append({
                     "id": row.get("id"),
                     "asset_id": row.get("asset_id"),
-                    "title": row.get("title"),
+                    "title": row.get("intervention_type"),  # Use intervention_type as title
                     "description": row.get("description"),
-                    "type": row.get("type"),
+                    "type": row.get("intervention_type"),
                     "status": row.get("status"),
                     "priority": row.get("priority"),
-                    "scheduled_start": row.get("scheduled_start").isoformat() if row.get("scheduled_start") else None,
-                    "scheduled_end": row.get("scheduled_end").isoformat() if row.get("scheduled_end") else None,
-                    "actual_start": row.get("actual_start").isoformat() if row.get("actual_start") else None,
-                    "actual_end": row.get("actual_end").isoformat() if row.get("actual_end") else None,
-                    "assigned_to": row.get("assigned_to"),
+                    "scheduled_start": row.get("scheduled_date").isoformat() if row.get("scheduled_date") else None,
+                    "scheduled_end": None,  # Not in schema
+                    "actual_start": row.get("started_at").isoformat() if row.get("started_at") else None,
+                    "actual_end": row.get("completed_at").isoformat() if row.get("completed_at") else None,
+                    "assigned_to": row.get("technician"),
                     "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
                     "updated_at": row.get("updated_at").isoformat() if row.get("updated_at") else None,
                 })

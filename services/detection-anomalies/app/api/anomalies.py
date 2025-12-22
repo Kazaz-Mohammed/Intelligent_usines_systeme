@@ -240,7 +240,7 @@ async def get_anomalies(
     end_date: Optional[datetime] = Query(None, description="Date de fin"),
     criticality: Optional[str] = Query(None, description="Filtrer par criticité (low, medium, high, critical)"),
     is_anomaly: Optional[bool] = Query(None, description="Filtrer par is_anomaly (true/false)"),
-    limit: int = Query(100, ge=1, le=1000, description="Nombre maximum de résultats"),
+    limit: int = Query(100, ge=1, le=5000, description="Nombre maximum de résultats"),
     offset: int = Query(0, ge=0, description="Offset pour la pagination"),
     db_service: PostgreSQLService = Depends(get_postgresql_service)
 ):

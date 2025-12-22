@@ -92,16 +92,14 @@ class TSFreshFeaturesService:
             for feature_name, feature_value in extracted_features_df.iloc[0].items():
                 try:
                     if pd.notna(feature_value) and not np.isinf(feature_value):
-                        import uuid
                         features.append(ExtractedFeature(
-                            feature_id=str(uuid.uuid4()),
-                            name=f"tsfresh_{feature_name}",
-                            value=float(feature_value),
+                            timestamp=base_timestamp,
+                            asset_id=asset_id,
+                            sensor_id=sensor_id,
+                            feature_name=f"tsfresh_{feature_name}",
+                            feature_value=float(feature_value),
                             feature_type="temporal",
                             metadata={
-                                "timestamp": base_timestamp.isoformat(),
-                                "asset_id": asset_id,
-                                "sensor_id": sensor_id,
                                 "window_size": len(data),
                                 "calculation_method": "tsfresh",
                                 "base_feature": feature_name

@@ -70,6 +70,8 @@ RUN rm -f /tmp/install_pkg.sh
 
 # Copier le code de l'application
 COPY app ./app
+COPY start_worker.py ./start_worker.py
+COPY models ./models
 
 # Exposer le port
 EXPOSE 8085

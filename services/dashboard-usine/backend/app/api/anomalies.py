@@ -22,7 +22,7 @@ async def get_anomalies(
     end_date: Optional[datetime] = Query(None),
     criticality: Optional[str] = Query(None),
     is_anomaly: Optional[bool] = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=5000),
     offset: int = Query(0, ge=0)
 ):
     """Get list of anomalies"""
@@ -53,6 +53,15 @@ async def get_anomalies(
                 else:
                     timestamp = timestamp_str
                 
+                # Parse created_at (when the anomaly was detected/saved)
+                created_at_str = item.get('created_at')
+                created_at = None
+                if created_at_str:
+                    if isinstance(created_at_str, str):
+                        created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                    else:
+                        created_at = created_at_str
+                
                 # Map 'criticality' to 'severity' (detection-anomalies uses 'criticality')
                 severity = item.get('severity') or item.get('criticality', 'medium')
                 
@@ -67,6 +76,7 @@ async def get_anomalies(
                     asset_id=item.get('asset_id'),
                     sensor_id=item.get('sensor_id'),
                     timestamp=timestamp,
+                    created_at=created_at,
                     severity=severity,
                     is_anomaly=item.get('is_anomaly', True),
                     anomaly_score=anomaly_score,

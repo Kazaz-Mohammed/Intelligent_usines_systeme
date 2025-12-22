@@ -132,6 +132,9 @@ class FeatureExtractionService:
                     sensor_data.sort(key=lambda x: x.timestamp)
                     logger.info(f"  📡 Capteur {sensor_id}: {len(sensor_data)} points de données")
                     
+                    # Calculer les features pour ce capteur
+                    sensor_features: List[ExtractedFeature] = []
+                    
                     # Calculer les features temporelles
                     if settings.enable_temporal_features:
                         logger.debug(f"    Calcul des features temporelles pour {sensor_id}...")
@@ -139,7 +142,7 @@ class FeatureExtractionService:
                             sensor_data
                         )
                         logger.info(f"    ✓ {len(temporal_features)} features temporelles calculées pour {sensor_id}")
-                        all_features.extend(temporal_features)
+                        sensor_features.extend(temporal_features)
                         
                         # Calculer les features tsfresh (optionnel)
                         if self.tsfresh_features_service.is_available():
@@ -147,7 +150,7 @@ class FeatureExtractionService:
                                 tsfresh_features = self.tsfresh_features_service.calculate_tsfresh_features(
                                     sensor_data
                                 )
-                                all_features.extend(tsfresh_features)
+                                sensor_features.extend(tsfresh_features)
                             except Exception as e:
                                 logger.warning(f"Erreur lors du calcul des features tsfresh: {e}")
                     
@@ -156,14 +159,14 @@ class FeatureExtractionService:
                         frequency_features = self.frequency_features_service.calculate_frequency_features(
                             sensor_data
                         )
-                        all_features.extend(frequency_features)
+                        sensor_features.extend(frequency_features)
                         
                         # Calculer l'énergie par bande
                         try:
                             band_energy_features = self.frequency_features_service.calculate_band_energy(
                                 sensor_data
                             )
-                            all_features.extend(band_energy_features)
+                            sensor_features.extend(band_energy_features)
                         except Exception as e:
                             logger.warning(f"Erreur lors du calcul de l'énergie de bande: {e}")
                     
@@ -173,9 +176,21 @@ class FeatureExtractionService:
                             wavelet_features = self.wavelet_features_service.calculate_wavelet_features(
                                 sensor_data
                             )
-                            all_features.extend(wavelet_features)
+                            sensor_features.extend(wavelet_features)
                         except Exception as e:
                             logger.warning(f"Erreur lors du calcul des features ondelettes: {e}")
+                    
+                    # En mode streaming, publier immédiatement après chaque capteur pour éviter les timeouts
+                    if mode == "streaming" and sensor_features:
+                        # Publier les features de ce capteur immédiatement
+                        try:
+                            self._publish_features_grouped(sensor_features, asset_id)
+                            logger.info(f"  ✓ Publié {len(sensor_features)} features pour capteur {sensor_id}")
+                        except Exception as e:
+                            logger.error(f"  ✗ Erreur lors de la publication des features pour capteur {sensor_id}: {e}", exc_info=True)
+                    
+                    # Ajouter aux features totales pour stockage
+                    all_features.extend(sensor_features)
                 
                 # Standardiser les features par type d'actif
                 if settings.enable_standardization and all_features:
@@ -209,11 +224,13 @@ class FeatureExtractionService:
                     
                     logger.debug(f"Features stockées dans Feast pour asset={asset_id}: {len(all_features)} features")
                 
-                # Publier sur Kafka
-                if mode == "streaming":
-                    # Mode streaming: grouper les features par asset_id/sensor_id/timestamp et publier
+                # En mode streaming, les features ont déjà été publiées par capteur
+                # En mode batch, publier maintenant
+                if mode == "batch":
                     self._publish_features_grouped(all_features, asset_id)
-                    logger.info(f"Publié {len(all_features)} features en streaming pour asset={asset_id}")
+                    logger.info(f"Publié {len(all_features)} features en batch pour asset={asset_id}")
+                elif mode == "streaming":
+                    logger.info(f"✓ Traitement terminé: {len(all_features)} features totales pour asset={asset_id} (déjà publiées par capteur)")
                 elif mode == "batch":
                     # Mode batch: accumuler et traiter par fenêtres
                     self._accumulate_data(asset_id, all_features)
@@ -317,11 +334,11 @@ class FeatureExtractionService:
             Vecteur de features
         """
         # Convertir les features en dictionnaire
-        features_dict = {feature.name: feature.value for feature in features}
+        features_dict = {feature.feature_name: feature.feature_value for feature in features}
         
         # Créer le vecteur de features
-        # Get sensor_id from first feature's metadata or use default
-        sensor_id = features[0].metadata.get("sensor_id", "unknown") if features else "unknown"
+        # Get sensor_id from first feature or use default
+        sensor_id = features[0].sensor_id if features else "unknown"
         feature_vector = ExtractedFeaturesVector(
             vector_id=f"fv_{windowed_data.window_id}",
             timestamp=windowed_data.end_timestamp,
@@ -361,21 +378,18 @@ class FeatureExtractionService:
                 return None
             
             # Créer un vecteur de features à partir du buffer
-            features_dict = {feature.name: feature.value for feature in current_buffer}
+            features_dict = {feature.feature_name: feature.feature_value for feature in current_buffer}
             
             # Créer le vecteur de features
             vector_id = f"fv_{asset_id}_{uuid.uuid4().hex[:8]}"
-            # Get timestamps and sensor_id from metadata
+            # Get timestamps and sensor_id from features
             timestamps = []
             sensor_ids = set()
             for f in current_buffer:
-                ts_str = f.metadata.get("timestamp")
-                if ts_str:
-                    from datetime import datetime
-                    timestamps.append(datetime.fromisoformat(ts_str))
-                sensor_id = f.metadata.get("sensor_id")
-                if sensor_id:
-                    sensor_ids.add(sensor_id)
+                if f.timestamp:
+                    timestamps.append(f.timestamp)
+                if f.sensor_id:
+                    sensor_ids.add(f.sensor_id)
             min_timestamp = min(timestamps) if timestamps else datetime.now()
             max_timestamp = max(timestamps) if timestamps else datetime.now()
             sensor_id = list(sensor_ids)[0] if sensor_ids else "unknown"
@@ -427,12 +441,12 @@ class FeatureExtractionService:
         if not features:
             return
         
-        # Grouper par sensor_id et timestamp (from metadata)
+        # Grouper par sensor_id et timestamp
         grouped: Dict[str, Dict[str, List[ExtractedFeature]]] = defaultdict(lambda: defaultdict(list))
         
         for feature in features:
-            sensor_id = feature.metadata.get("sensor_id", "unknown")
-            timestamp_str = feature.metadata.get("timestamp", "")
+            sensor_id = feature.sensor_id
+            timestamp_str = feature.timestamp.isoformat() if feature.timestamp else ""
             # Use timestamp as key for grouping
             grouped[sensor_id][timestamp_str].append(feature)
         
@@ -440,7 +454,7 @@ class FeatureExtractionService:
         for sensor_id, timestamp_groups in grouped.items():
             for timestamp_str, feature_group in timestamp_groups.items():
                 # Convertir les features en dictionnaire {feature_name: feature_value}
-                features_dict = {f.name: f.value for f in feature_group}
+                features_dict = {f.feature_name: f.feature_value for f in feature_group}
                 
                 # Extraire timestamp
                 try:

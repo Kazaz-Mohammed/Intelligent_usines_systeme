@@ -16,9 +16,33 @@ import { Skeleton } from "@/components/ui/skeleton"
 export default function DashboardPage() {
   const { kpis, isLoading: kpisLoading, refetch: refetchKPIs } = useKPISummary({ days: 30 })
   const { assets, isLoading: assetsLoading, refetch: refetchAssets } = useAssets({ page_size: 100 })
-  const { anomalies, isLoading: anomaliesLoading, refetch: refetchAnomalies } = useAnomalies({ limit: 10 })
+  
+  // Memoize the anomaly params for trend chart
+  // Don't use start_date filter since we group by created_at (detection time)
+  // but the API filters by timestamp (sensor data time) - they don't match
+  const anomalyParams = useMemo(() => {
+    return {
+      limit: 5000, // Get all anomalies for accurate trend chart
+      is_anomaly: true // Only fetch actual anomalies
+    }
+  }, []) // Empty dependency array - calculate once on mount
+  
+  // Separate params for recent anomalies - fetch most recent without date filter
+  // Backend sorts by timestamp DESC, so we get newest first
+  // Removed is_anomaly filter to ensure we get all recent detections
+  const recentAnomalyParams = useMemo(() => {
+    return {
+      limit: 100, // Get more to ensure we have recent ones
+      // No date filter, no is_anomaly filter - just get the most recent anomalies
+      // We'll filter client-side to only show is_anomaly=true
+    }
+  }, [])
+  
+  const { anomalies, isLoading: anomaliesLoading, refetch: refetchAnomalies } = useAnomalies(anomalyParams)
+  const { anomalies: recentAnomalies, isLoading: recentAnomaliesLoading, refetch: refetchRecentAnomalies } = useAnomalies(recentAnomalyParams)
   const { interventions, isLoading: interventionsLoading, refetch: refetchInterventions } = useInterventions({ limit: 10 })
   
+  // Exclude recentAnomaliesLoading from main isLoading to prevent flickering
   const isLoading = kpisLoading || assetsLoading || anomaliesLoading || interventionsLoading
 
   const { isConnected } = useWebSocket({
@@ -29,13 +53,36 @@ export default function DashboardPage() {
         refetchKPIs()
         refetchAssets()
         refetchAnomalies()
+        refetchRecentAnomalies() // Also refresh recent anomalies
         refetchInterventions()
       }
     },
   })
 
+  // Auto-refresh recent anomalies every 30 seconds to show new detections
+  // Use silent refresh - don't show loading state
+  useEffect(() => {
+    // Initial fetch delay to ensure data is loaded after mount
+    const timeout = setTimeout(() => {
+      refetchRecentAnomalies()
+    }, 2000) // Refresh after 2 seconds on mount
+    
+    const interval = setInterval(() => {
+      // Silently refresh without showing loading state
+      refetchRecentAnomalies()
+    }, 30000) // Refresh every 30 seconds
+
+    return () => {
+      clearTimeout(timeout)
+      clearInterval(interval)
+    }
+  }, [refetchRecentAnomalies])
+
   // Calculate status distribution from assets
   const statusData = useMemo(() => {
+    if (!assets || !Array.isArray(assets)) {
+      return []
+    }
     const statusCounts = assets.reduce((acc, asset) => {
       acc[asset.status] = (acc[asset.status] || 0) + 1
       return acc
@@ -56,26 +103,56 @@ export default function DashboardPage() {
     }))
   }, [assets])
 
-  // Generate anomaly trend from actual anomalies data
+  // Generate anomaly trend from actual anomalies data (last 7 days by actual date)
   const anomalyTrendData = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     const counts: Record<string, number> = {}
     
-    // Initialize all days with 0
-    days.forEach(day => counts[day] = 0)
+    // Initialize last 7 days with 0 (including today)
+    const today = new Date()
+    // Ensure we include today by going from 6 days ago to today (7 days total)
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      // Use UTC to avoid timezone issues
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      const dateKey = `${year}-${month}-${day}` // YYYY-MM-DD format
+      counts[dateKey] = 0
+    }
     
-    // Count anomalies per day of week
-    anomalies.forEach(anomaly => {
-      const date = new Date(anomaly.timestamp)
-      const dayName = days[date.getDay()]
-      counts[dayName] = (counts[dayName] || 0) + 1
-    })
+    // Count anomalies per detection date (use created_at when available, fall back to timestamp)
+    if (anomalies && Array.isArray(anomalies)) {
+      anomalies.forEach(anomaly => {
+        try {
+          // Use created_at (when detected) for trend, not timestamp (sensor data time)
+          const detectionTime = anomaly.created_at || anomaly.timestamp
+          const date = new Date(detectionTime)
+          // Convert to UTC date string to match the initialized dates
+          const year = date.getUTCFullYear()
+          const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+          const day = String(date.getUTCDate()).padStart(2, '0')
+          const dateKey = `${year}-${month}-${day}` // YYYY-MM-DD format
+          
+          // Always add to counts, even if not in initialized range (for today's anomalies)
+          counts[dateKey] = (counts[dateKey] || 0) + 1
+        } catch (e) {
+          console.warn('Invalid timestamp in anomaly:', anomaly.created_at || anomaly.timestamp, e)
+        }
+      })
+    }
     
-    // Return in Mon-Sun order
-    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => ({
-      date: day,
-      count: counts[day] || 0
-    }))
+    // Convert to array with formatted dates (MM/DD)
+    return Object.entries(counts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, count]) => {
+        // Parse the dateKey (YYYY-MM-DD) and format as MM/DD
+        const [year, month, day] = dateKey.split('-')
+        return {
+          date: `${month}/${day}`,
+          count: count || 0
+        }
+      })
   }, [anomalies])
 
   const kpiCards = [
@@ -226,27 +303,48 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Recent Anomalies</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {/* Only show loading skeleton on initial load, not on refresh */}
+            {recentAnomaliesLoading && (!recentAnomalies || recentAnomalies.length === 0) ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
-            ) : anomalies.length === 0 ? (
+            ) : !recentAnomalies || recentAnomalies.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No recent anomalies</p>
             ) : (
               <div className="space-y-3">
-                {anomalies.slice(0, 5).map((anomaly, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div>
-                    <p className="font-medium text-sm">Asset {anomaly.asset_id}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(anomaly.timestamp).toLocaleTimeString()}</p>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium severity-${anomaly.severity}`}>
-                    {anomaly.severity}
-                  </div>
-                </div>
-                ))}
+                {recentAnomalies
+                  .filter(anomaly => anomaly.is_anomaly === true) // Filter to only show actual anomalies
+                  .sort((a, b) => {
+                    // Sort by created_at (when detected) first, fall back to timestamp
+                    const aTime = a.created_at ? new Date(a.created_at).getTime() : new Date(a.timestamp).getTime()
+                    const bTime = b.created_at ? new Date(b.created_at).getTime() : new Date(b.timestamp).getTime()
+                    return bTime - aTime // Newest first
+                  })
+                  .slice(0, 5)
+                  .map((anomaly) => {
+                    // Use created_at for display (when detected), fall back to timestamp
+                    const displayTime = anomaly.created_at || anomaly.timestamp
+                    return (
+                      <div key={`${anomaly.id || anomaly.asset_id}-${displayTime}`} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                        <div>
+                          <p className="font-medium text-sm">Asset {anomaly.asset_id}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(displayTime).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit', 
+                              second: '2-digit',
+                              hour12: false 
+                            })}
+                          </p>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium severity-${anomaly.severity}`}>
+                          {anomaly.severity}
+                        </div>
+                      </div>
+                    )
+                  })}
               </div>
             )}
           </CardContent>
@@ -264,7 +362,7 @@ export default function DashboardPage() {
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
-            ) : interventions.length === 0 ? (
+            ) : !interventions || interventions.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No active interventions</p>
             ) : (
               <div className="space-y-3">

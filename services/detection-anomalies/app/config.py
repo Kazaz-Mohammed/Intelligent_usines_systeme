@@ -35,13 +35,13 @@ class Settings(BaseSettings):
     enable_one_class_svm: bool = True
     enable_lstm_autoencoder: bool = False  # Disabled by default for faster startup
     
-    # Isolation Forest
-    isolation_forest_contamination: float = 0.1
+    # Isolation Forest - More sensitive for gradual degradation
+    isolation_forest_contamination: float = 0.2  # Expect 20% anomalies (was 0.1)
     isolation_forest_n_estimators: int = 100
     isolation_forest_max_samples: str = "auto"
     
-    # One-Class SVM
-    one_class_svm_nu: float = 0.1
+    # One-Class SVM - More sensitive for gradual degradation
+    one_class_svm_nu: float = 0.2  # Expect 20% anomalies (was 0.1)
     one_class_svm_kernel: str = "rbf"
     one_class_svm_gamma: str = "scale"
     
@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     lstm_autoencoder_learning_rate: float = 0.001
     lstm_autoencoder_threshold_percentile: float = 95.0
     
-    # Scoring
-    anomaly_score_threshold: float = 0.5
+    # Scoring - Lowered threshold for better sensitivity
+    anomaly_score_threshold: float = 0.3  # Lower threshold to catch more anomalies (was 0.5)
     adaptive_threshold_enabled: bool = True
     criticality_levels: List[str] = ["low", "medium", "high", "critical"]
     

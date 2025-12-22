@@ -78,16 +78,14 @@ class FrequencyFeaturesService:
                 )
                 
                 if feature_value is not None and not np.isnan(feature_value) and not np.isinf(feature_value):
-                    import uuid
                     features.append(ExtractedFeature(
-                        feature_id=str(uuid.uuid4()),
-                        name=feature_name,
-                        value=float(feature_value),
+                        timestamp=base_timestamp,
+                        asset_id=asset_id,
+                        sensor_id=sensor_id,
+                        feature_name=feature_name,
+                        feature_value=float(feature_value),
                         feature_type="frequency",
                         metadata={
-                            "timestamp": base_timestamp.isoformat(),
-                            "asset_id": asset_id,
-                            "sensor_id": sensor_id,
                             "window_size": len(data),
                             "sampling_rate": sampling_rate,
                             "calculation_method": "frequency_features_service"
@@ -412,16 +410,14 @@ class FrequencyFeaturesService:
                 band_width = high_freq - low_freq
                 normalized_energy = band_energy / band_width if band_width > 0 else band_energy
                 
-                import uuid
                 features.append(ExtractedFeature(
-                    feature_id=str(uuid.uuid4()),
-                    name=f"band_energy_{i}_{int(low_freq)}_{int(high_freq)}",
-                    value=float(normalized_energy),
+                    timestamp=base_timestamp,
+                    asset_id=asset_id,
+                    sensor_id=sensor_id,
+                    feature_name=f"band_energy_{i}_{int(low_freq)}_{int(high_freq)}",
+                    feature_value=float(normalized_energy),
                     feature_type="frequency",
                     metadata={
-                        "timestamp": base_timestamp.isoformat(),
-                        "asset_id": asset_id,
-                        "sensor_id": sensor_id,
                         "window_size": len(data),
                         "sampling_rate": sampling_rate,
                         "band_low": low_freq,

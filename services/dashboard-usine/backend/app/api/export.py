@@ -96,9 +96,42 @@ async def export_csv(
                         logger.error(f"Error fetching features for asset {asset_id}: {e}", exc_info=True)
                         writer.writerow([f"Error fetching features for asset {asset_id}: {str(e)}"])
                 else:
-                    # For all assets, we'd need to query the database directly
-                    # For now, just write a note
-                    writer.writerow(["Note: Export all assets features requires asset_id filter"])
+                    # Query database directly for all assets
+                    try:
+                        db = await get_postgresql_service()
+                        query = "SELECT asset_id, sensor_id, timestamp, feature_name, feature_value FROM extracted_features WHERE 1=1"
+                        params = []
+                        param_num = 1
+                        
+                        if start_dt:
+                            query += f" AND timestamp >= ${param_num}"
+                            params.append(start_dt)
+                            param_num += 1
+                        if end_dt:
+                            query += f" AND timestamp <= ${param_num}"
+                            params.append(end_dt)
+                            param_num += 1
+                        
+                        query += f" ORDER BY timestamp DESC LIMIT ${param_num}"
+                        params.append(settings.export_max_records)
+                        
+                        rows = await db.fetch(query, *params)
+                        logger.info(f"Found {len(rows)} features from database")
+                        
+                        if not rows:
+                            writer.writerow(["No features found in the specified date range"])
+                        else:
+                            for row in rows:
+                                writer.writerow([
+                                    row.get("asset_id", ""),
+                                    row.get("sensor_id", ""),
+                                    str(row.get("timestamp", "")),
+                                    row.get("feature_name", ""),
+                                    str(row.get("feature_value", ""))
+                                ])
+                    except Exception as e:
+                        logger.error(f"Error fetching features from database: {e}", exc_info=True)
+                        writer.writerow([f"Error fetching features: {str(e)}"])
                     
             elif dt == "anomalies":
                 writer.writerow([])

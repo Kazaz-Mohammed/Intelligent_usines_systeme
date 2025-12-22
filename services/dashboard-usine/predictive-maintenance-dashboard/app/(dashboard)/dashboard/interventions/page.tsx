@@ -39,17 +39,29 @@ export default function InterventionsPage() {
   }
 
   const filteredInterventions = useMemo(() => {
+    if (!interventions || !Array.isArray(interventions)) return []
     if (statusFilter === "all") return interventions
     return interventions.filter((i) => i.status === statusFilter)
   }, [interventions, statusFilter])
 
-  const statusStats = useMemo(() => ({
-    total: interventions.length,
-    planned: interventions.filter((i) => i.status === "planned").length,
-    inProgress: interventions.filter((i) => i.status === "in_progress").length,
-    completed: interventions.filter((i) => i.status === "completed").length,
-    overdue: interventions.filter((i) => i.status === "overdue").length,
-  }), [interventions])
+  const statusStats = useMemo(() => {
+    if (!interventions || !Array.isArray(interventions)) {
+      return {
+        total: 0,
+        planned: 0,
+        inProgress: 0,
+        completed: 0,
+        overdue: 0,
+      }
+    }
+    return {
+      total: interventions.length,
+      planned: interventions.filter((i) => i.status === "planned").length,
+      inProgress: interventions.filter((i) => i.status === "in_progress").length,
+      completed: interventions.filter((i) => i.status === "completed").length,
+      overdue: interventions.filter((i) => i.status === "overdue").length,
+    }
+  }, [interventions])
 
   return (
     <div className="space-y-8">
@@ -158,7 +170,7 @@ export default function InterventionsPage() {
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   </TableRow>
-                ) : filteredInterventions.length === 0 ? (
+                ) : !filteredInterventions || filteredInterventions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
                       <p className="text-muted-foreground">No interventions found</p>

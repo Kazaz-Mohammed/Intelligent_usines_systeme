@@ -21,7 +21,7 @@ export function useAssets(params: UseAssetsParams = {}) {
       console.log("[useAssets] Fetching assets with params:", params)
       const data = await apiClient.getAssets({ page_size: params.page_size || 100, ...params })
       console.log("[useAssets] Got response:", data)
-      setAssets(data.data || [])
+      setAssets(data.assets || [])
       setError(null)
     } catch (err) {
       console.error("[useAssets] Failed to fetch assets:", err)

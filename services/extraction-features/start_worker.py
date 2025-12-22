@@ -3,7 +3,20 @@
 Standalone script to run the extraction-features worker
 """
 import sys
+import os
+
+# Ensure the current directory is in sys.path for proper imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 import logging
+
+# Debug: verify ExtractedFeature model
+from app.models.feature_data import ExtractedFeature
+print(f"ExtractedFeature fields: {list(ExtractedFeature.model_fields.keys())}")
+print(f"ExtractedFeature module: {ExtractedFeature.__module__}")
+
 from app.worker import FeatureExtractionWorker
 from app.config import settings
 
