@@ -105,7 +105,6 @@ pipeline {
                                     echo 'Installation des dépendances Python pour Preprocessing...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'python -m pip cache purge 2>nul || echo Cache purge skipped'
                                         bat 'pip install -r requirements.txt --user --ignore-installed'
                                     }
                                 }
@@ -145,7 +144,6 @@ pipeline {
                                     echo 'Installation des dépendances Python pour ExtractionFeatures...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'python -m pip cache purge 2>nul || echo Cache purge skipped'
                                         bat 'pip install -r requirements.txt --user --ignore-installed'
                                     }
                                 }
@@ -185,7 +183,6 @@ pipeline {
                                     echo 'Installation des dépendances Python pour DetectionAnomalies...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'python -m pip cache purge 2>nul || echo Cache purge skipped'
                                         bat 'pip install -r requirements.txt --user --ignore-installed'
                                     }
                                 }
@@ -225,7 +222,6 @@ pipeline {
                                     echo 'Installation des dépendances Python pour PredictionRUL...'
                                     script {
                                         bat 'python -m pip install --upgrade pip'
-                                        bat 'python -m pip cache purge 2>nul || echo Cache purge skipped'
                                         bat 'pip install -r requirements.txt --user --ignore-installed'
                                     }
                                 }
