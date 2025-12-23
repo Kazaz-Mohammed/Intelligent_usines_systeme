@@ -1,33 +1,18 @@
 # Maintenance Prédictive Temps-Réel pour Usines Intelligentes
 
-Plateforme de maintenance prédictive intégrant ML/DL, Data Mining (KNIME), et Architecture Microservices.
+Plateforme de maintenance prédictive intégrant ML/DL, Data Mining (KNIME), et Architecture Microservices pour la détection d'anomalies et la prédiction de la durée de vie résiduelle (RUL) des équipements industriels.
 
-## 📚 Documentation du Projet
+## 🎯 Vue d'Ensemble
 
-Ce projet combine **3 modules académiques** en une solution complète :
+Cette plateforme combine **3 modules académiques** en une solution complète :
 
-1. **ML & DL (Système d'Information Géographique)** : Modèles de prédiction RUL et détection d'anomalies
+1. **ML & DL** : Modèles de prédiction RUL (LSTM, XGBoost) et détection d'anomalies (Isolation Forest, Autoencodeurs)
 2. **Data Mining** : Analyse exploratoire avec KNIME Analytics Platform
-3. **Architecture Microservices** : Système distribué avec Spring Boot, Docker, Kubernetes
+3. **Architecture Microservices** : Système distribué avec Spring Boot, FastAPI, Docker, Kubernetes
 
-### 📖 Documents Essentiels
+## 🏗️ Architecture du Système
 
-- **[PROJECT_EXPLANATION.md](PROJECT_EXPLANATION.md)** : Explication complète du projet et intégration des 3 modules
-- **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** : Plan de développement détaillé phase par phase avec tests
-- **[AI_PROMPT_TEMPLATE.md](AI_PROMPT_TEMPLATE.md)** : Templates de prompts pour assistance IA
-- **[GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md)** : Stratégie Git et workflow de développement
-
-## 🎯 Objectif
-
-Développer une plateforme temps-réel capable de :
-- ✅ Détecter précocement les anomalies
-- ✅ Estimer la Remaining Useful Life (RUL) des équipements
-- ✅ Planifier des interventions optimales
-- ✅ S'intégrer aux systèmes OT/IT (SCADA/MES/CMMS/ERP)
-
-## 🏗️ Architecture
-
-### 7 Microservices
+### Flux de Données
 
 ```
 IngestionIIoT → Prétraitement → ExtractionFeatures
@@ -39,26 +24,23 @@ IngestionIIoT → Prétraitement → ExtractionFeatures
                         DashboardUsine (React + GIS)
 ```
 
-1. **IngestionIIoT** : Collecte données PLC/SCADA (OPC UA, Modbus, MQTT)
-2. **Prétraitement** : Nettoyage et normalisation des données
-3. **ExtractionFeatures** : Calcul caractéristiques temporelles/fréquentielles
-4. **DétectionAnomalies** : Détection anomalies temps-réel (PyOD, Autoencodeurs)
-5. **PrédictionRUL** : Estimation RUL (LSTM/GRU/TCN custom)
-6. **OrchestrateurMaintenance** : Planification optimisée (Drools, OR-Tools)
-7. **DashboardUsine** : Interface temps-réel avec visualisations GIS
+### 7 Microservices
 
-### Technologies
+1. **Ingestion-IIoT** (Spring Boot) : Collecte données PLC/SCADA via OPC UA, Modbus, MQTT
+2. **Prétraitement** (FastAPI) : Nettoyage, normalisation et validation des données
+3. **Extraction-Features** (FastAPI) : Calcul caractéristiques temporelles/fréquentielles
+4. **Détection-Anomalies** (FastAPI + ML) : Détection anomalies temps-réel avec Isolation Forest et Autoencodeurs
+5. **Prédiction-RUL** (FastAPI + ML) : Estimation RUL avec LSTM et XGBoost
+6. **Orchestrateur-Maintenance** (Spring Boot) : Planification optimisée des interventions
+7. **Dashboard-Usine** (React + FastAPI) : Interface temps-réel avec visualisations GIS
 
-- **Backend Java** : Spring Boot, Eclipse Milo (OPC UA)
-- **Backend Python** : FastAPI, PyTorch, PyOD
-- **ML/DL** : Modèles custom (LSTM, GRU, TCN, Autoencodeurs)
-- **Data Mining** : KNIME Analytics Platform
-- **Messaging** : Apache Kafka
-- **Databases** : PostgreSQL, TimescaleDB, InfluxDB, Feast, MLflow
-- **Frontend** : React.js, WebSockets, Plotly, Grafana
-- **GIS** : PostGIS, Leaflet/Mapbox
-- **Infrastructure** : Docker, Kubernetes
-- **Monitoring** : Prometheus, Grafana, OpenTelemetry
+### Infrastructure
+
+- **Messaging** : Apache Kafka (Zookeeper)
+- **Databases** : PostgreSQL (TimescaleDB), InfluxDB, MinIO (S3-compatible)
+- **Cache** : Redis
+- **Monitoring** : Prometheus, Grafana (optionnel)
+- **Tools** : Kafka UI, pgAdmin, OPC UA Simulator (optionnel)
 
 ## 📊 Dataset
 
@@ -68,164 +50,203 @@ IngestionIIoT → Prétraitement → ExtractionFeatures
 - 4 scénarios de dégradation
 - Format CSV
 
-## 🚀 Démarrage Rapide
+## 🚀 Installation et Démarrage
 
 ### Prérequis
 
-- Docker & Docker Compose
-- Java 17+ (pour services Spring Boot)
-- Python 3.9+ (pour services Python)
-- Node.js 18+ (pour frontend React)
-- KNIME Analytics Platform (pour data mining)
-- Git
+- **Docker** & **Docker Compose** (version 3.8+)
+- **Git**
+- **8GB RAM minimum** (recommandé: 16GB)
+- **Ports disponibles** : 3000, 4840, 5050, 5432, 6379, 8080-8091, 9000-9001, 9092-9093
 
 ### Installation
 
+1. **Cloner le dépôt**
 ```bash
-# Cloner le dépôt
 git clone https://github.com/Kazaz-Mohammed/usines_intelligentes.git
 cd usines_intelligentes
+```
 
-# (À venir) Démarrer l'infrastructure
+2. **Configurer les variables d'environnement**
+```bash
+# Copier le fichier d'exemple
+cp env.example .env
+
+# Éditer .env avec vos valeurs (optionnel, valeurs par défaut disponibles)
+# POSTGRES_DB=predictive_maintenance
+# POSTGRES_USER=pmuser
+# POSTGRES_PASSWORD=pmpassword
+# MINIO_ROOT_USER=minioadmin
+# MINIO_ROOT_PASSWORD=minioadmin
+# INFLUXDB_TOKEN=pm-token-change-in-production
+```
+
+3. **Initialiser l'infrastructure** (Kafka, PostgreSQL, MinIO, etc.)
+```bash
+# Windows PowerShell
+.\scripts\init-kafka-topics.ps1
+.\scripts\init-minio-buckets.ps1
+
+# Linux/Mac
+chmod +x scripts/*.sh
+./scripts/init-kafka-topics.sh
+./scripts/init-minio-buckets.sh
+```
+
+4. **Démarrer tous les services**
+```bash
+# Démarrer l'infrastructure et les services
 docker-compose up -d
 
-# (À venir) Démarrer les services
-# ...
+# Vérifier le statut
+docker-compose ps
+
+# Voir les logs
+docker-compose logs -f
 ```
 
-## 📋 Plan de Développement
-
-Le projet est organisé en **12 phases** :
-
-1. **Phase 0** : Initialisation GitHub ✅
-2. **Phase 1** : Infrastructure Docker
-3. **Phase 2** : Service IngestionIIoT
-4. **Phase 3** : Service Prétraitement
-5. **Phase 4** : Service ExtractionFeatures
-6. **Phase 5** : Data Mining KNIME
-7. **Phase 6** : Service DétectionAnomalies
-8. **Phase 7** : Service PrédictionRUL
-9. **Phase 8** : Service OrchestrateurMaintenance
-10. **Phase 9** : Service DashboardUsine
-11. **Phase 10** : Intégration E2E
-12. **Phase 11** : Déploiement Kubernetes
-13. **Phase 12** : Finalisation Documentation
-
-Voir [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) pour les détails.
-
-## 🧪 Tests
-
-Chaque phase inclut :
-- Tests unitaires (couverture > 70%)
-- Tests d'intégration
-- Tests de performance
-- Validation manuelle
-
-**Règle** : Ne pas passer à la phase suivante sans validation complète de la phase actuelle.
-
-## 📝 Workflow Git
-
-### Branches
-
-- `main` : Code production-ready
-- `develop` : Développement principal
-- `feature/[nom]` : Nouvelles fonctionnalités
-
-### Convention de Commits
-
-```
-[TYPE][SERVICE] Description
-
-Exemples:
-[feat][ingestion-iiot] Ajout support OPC UA
-[fix][preprocessing] Correction rééchantillonnage
-[test][prediction-rul] Tests unitaires modèle LSTM
+5. **Démarrer avec outils de développement** (Kafka UI, pgAdmin, OPC UA Simulator)
+```bash
+docker-compose --profile tools up -d
 ```
 
-Voir [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) pour plus de détails.
+### Accès aux Services
 
-## 🤖 Assistance IA
+- **Dashboard Frontend** : http://localhost:3000
+- **Dashboard Backend API** : http://localhost:8091
+- **Kafka UI** : http://localhost:8080 (si activé avec `--profile tools`)
+- **pgAdmin** : http://localhost:5050 (si activé avec `--profile tools`)
+- **MinIO Console** : http://localhost:9001 (minioadmin/minioadmin)
+- **OPC UA Simulator** : opc.tcp://localhost:4840 (si activé)
 
-Utiliser les templates de [AI_PROMPT_TEMPLATE.md](AI_PROMPT_TEMPLATE.md) pour :
-- Développement de chaque service
-- Résolution de problèmes
-- Optimisation
-- Documentation
+### Services API
 
-## 📦 Structure du Projet
+- **Ingestion-IIoT** : http://localhost:8081
+- **Prétraitement** : http://localhost:8082
+- **Extraction-Features** : http://localhost:8083
+- **Détection-Anomalies** : http://localhost:8084
+- **Prédiction-RUL** : http://localhost:8085
+- **Orchestrateur-Maintenance** : http://localhost:8087
+
+## 📁 Structure du Projet
 
 ```
-projet/
-├── services/
+usines_intelligentes/
+├── services/                    # Microservices
 │   ├── ingestion-iiot/          # Service Spring Boot
-│   ├── pre-traitement/          # Service FastAPI
+│   ├── preprocessing/           # Service FastAPI
 │   ├── extraction-features/     # Service FastAPI
 │   ├── detection-anomalies/     # Service FastAPI + ML
 │   ├── prediction-rul/          # Service FastAPI + ML
-│   ├── orchestrateur-maintenance/  # Service Spring Boot
+│   ├── orchestrateur-maintenance/ # Service Spring Boot
 │   └── dashboard-usine/         # Frontend React + Backend FastAPI
-├── ml-models/
-│   ├── rul-prediction/          # Modèles LSTM/GRU/TCN
-│   └── anomaly-detection/       # Modèles PyOD + Autoencodeurs
-├── data-mining/
-│   └── knime-workflows/         # Workflows KNIME
-├── datasets/
-│   └── nasa-cmapss/             # Dataset NASA C-MAPSS
-├── infrastructure/
-│   ├── docker/                  # Dockerfiles
-│   ├── kubernetes/              # Manifests K8s
-│   └── docker-compose.yml       # Compose pour dev local
-├── tests/                       # Tests E2E
-├── docs/                        # Documentation
-└── scripts/                     # Scripts utilitaires
+├── ml_pipeline/                 # Pipeline ML (entraînement modèles)
+│   ├── ml_pipeline_tutorial.ipynb
+│   └── saved_models/            # Modèles entraînés
+├── data-mining/                 # Workflows KNIME
+├── datasets/                    # Dataset NASA C-MAPSS
+├── infrastructure/              # Configuration K8s, scripts
+├── scripts/                     # Scripts utilitaires
+├── docs/                        # Documentation technique
+├── docker-compose.yml           # Configuration Docker Compose
+└── README.md                    # Ce fichier
 ```
 
-## 🔒 Sécurité
+## 🔧 Utilisation
 
-- Pas de secrets/credentials dans le code
-- Utilisation de variables d'environnement
-- Chiffrement des communications (TLS)
-- Authentification/Authorization (JWT)
+### 1. Démarrer le système complet
+
+```bash
+docker-compose up -d
+```
+
+### 2. Vérifier la santé des services
+
+```bash
+# Vérifier tous les services
+docker-compose ps
+
+# Vérifier un service spécifique
+curl http://localhost:8081/health
+curl http://localhost:8082/health
+curl http://localhost:8083/health
+curl http://localhost:8084/health
+curl http://localhost:8085/health
+curl http://localhost:8087/health
+curl http://localhost:8091/health
+```
+
+### 3. Entraîner les modèles ML
+
+Voir [ml_pipeline/README.md](ml_pipeline/README.md) pour les instructions d'entraînement.
+
+### 4. Tester avec OPC UA Simulator
+
+```bash
+# Démarrer le simulateur OPC UA
+docker-compose --profile tools up -d opcua-simulator
+
+# Le service Ingestion-IIoT se connectera automatiquement
+```
+
+### 5. Arrêter le système
+
+```bash
+docker-compose down
+
+# Supprimer aussi les volumes (⚠️ supprime les données)
+docker-compose down -v
+```
+
+## 🧪 Tests
+
+```bash
+# Tests unitaires (dans chaque service)
+cd services/[service-name]
+# Python: pytest
+# Java: ./mvnw test
+
+# Tests d'intégration
+docker-compose up -d
+# Exécuter les scripts de test dans scripts/
+```
 
 ## 📊 Monitoring
 
-- **Prometheus** : Collecte métriques
-- **Grafana** : Visualisation et dashboards
-- **OpenTelemetry** : Traces distribuées
-- **Logging** : Centralisé (ELK/Loki)
+- **Logs** : `docker-compose logs -f [service-name]`
+- **Métriques** : Prometheus (si configuré)
+- **Visualisation** : Grafana (si configuré)
+- **Kafka** : Kafka UI (http://localhost:8080)
 
-## 🎓 Modules Académiques
+## 🔒 Sécurité
 
-### Module 1 : ML & DL (GIS)
-- Création modèles custom (pas de modules pré-existants)
-- Architecture PyTorch pour LSTM/GRU/TCN
-- Intégration GIS avec PostGIS
+- ⚠️ **Important** : Changer tous les mots de passe par défaut en production
+- Utiliser des variables d'environnement pour les secrets
+- Activer TLS/SSL pour les communications
+- Configurer l'authentification JWT
 
-### Module 2 : Data Mining
-- Workflows KNIME pour exploration
-- Analyse statistique et sélection features
-- Préparation données pour ML
+## 🛠️ Technologies
 
-### Module 3 : Microservices
-- Architecture Spring Boot
-- Communication REST/gRPC
-- Déploiement Docker/Kubernetes
-- Observabilité complète
+- **Backend Java** : Spring Boot 3.x, Eclipse Milo (OPC UA)
+- **Backend Python** : FastAPI, PyTorch, scikit-learn, XGBoost
+- **ML/DL** : PyTorch (LSTM), XGBoost, Isolation Forest, Autoencodeurs
+- **Data Mining** : KNIME Analytics Platform
+- **Messaging** : Apache Kafka
+- **Databases** : PostgreSQL (TimescaleDB), InfluxDB, MinIO
+- **Frontend** : React.js, Next.js, WebSockets, Plotly
+- **Infrastructure** : Docker, Docker Compose, Kubernetes
+- **Monitoring** : Prometheus, Grafana
 
-## 📈 Résultats Attendus
+## 📝 Documentation
 
-À la fin du développement :
-- ✅ 7 microservices fonctionnels
-- ✅ Modèles ML/DL custom entraînés
-- ✅ Workflows KNIME documentés
-- ✅ Pipeline temps-réel opérationnel
-- ✅ Dashboard interactif
-- ✅ Infrastructure Kubernetes
-- ✅ Documentation complète
+- [Documentation Architecture](docs/ARCHITECTURE_MICROSERVICES.md)
+- [ML Pipeline](ml_pipeline/README.md)
+- [Infrastructure](infrastructure/README.md)
+- [Scripts](scripts/README.md)
 
 ## 🤝 Contribution
 
-Ce projet est développé dans le cadre académique. Pour questions ou suggestions, créer une issue.
+Ce projet est développé dans le cadre académique. Pour questions ou suggestions, créer une issue sur GitHub.
 
 ## 📄 Licence
 
@@ -233,26 +254,12 @@ Ce projet est développé dans le cadre académique. Pour questions ou suggestio
 
 ## 🔗 Liens Utiles
 
+- Repository : https://github.com/Kazaz-Mohammed/usines_intelligentes.git
 - [Documentation Spring Boot](https://spring.io/projects/spring-boot)
 - [Documentation FastAPI](https://fastapi.tiangolo.com/)
 - [Documentation PyTorch](https://pytorch.org/docs/)
-- [Documentation KNIME](https://docs.knime.com/)
 - [Documentation Kafka](https://kafka.apache.org/documentation/)
-- [Documentation Kubernetes](https://kubernetes.io/docs/)
-
-## 📞 Contact
-
-- Repository : https://github.com/Kazaz-Mohammed/usines_intelligentes.git
 
 ---
 
-## ⚠️ État Actuel
-
-**Phase actuelle** : Phase 0 - Initialisation
-
-Le projet est en cours de développement. Suivre le plan dans [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) pour voir l'avancement.
-
----
-
-**Note** : Ce README sera mis à jour au fur et à mesure du développement.
-
+**Note** : Ce système est en développement actif. Consulter la documentation dans `docs/` pour plus de détails.

@@ -46,6 +46,8 @@ dmypy.json
 *.pb
 *.onnx
 *.tflite
+!ml_pipeline/saved_models/*.pth
+!ml_pipeline/saved_models/*.pkl
 mlruns/
 mlflow.db
 .mlflow/
@@ -175,6 +177,7 @@ knime-workspace/
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+!ml_pipeline/*.ipynb
 
 # Compiled files
 *.class
@@ -239,3 +242,61 @@ grafana-data/
 *.seed
 *.pid.lock
 migration-backup/
+
+# Documentation files (keep local, exclude from repo)
+AI_PROMPT_TEMPLATE.md
+CICD_*.md
+CURRENT_*.md
+DEVELOPMENT_PLAN.md
+DOCKER_*.md
+GITHUB_WORKFLOW.md
+PHASE_*.md
+PROJECT_EXPLANATION.md
+QUICK_START.md
+fix-sonarqube-postgres.md
+*_FIX_SUMMARY.md
+*_SETUP_COMPLETE.md
+*_STATUS.md
+PROGRESS_STATUS.md
+CONTRIBUTING.md
+
+# Phase completion documentation (keep in docs but exclude from repo)
+docs/PHASE_*_COMPLETE.md
+docs/PHASE_*_FINAL*.md
+docs/PHASE_*_STARTED.md
+docs/PHASE_*_PROGRESS.md
+docs/PHASE_*_TEST*.md
+docs/PHASE_*_VALIDATION.md
+docs/PHASE_*_FINALIZATION.md
+docs/PHASE_*_ORCHESTRATION*.md
+docs/PHASE_*_SERVICES*.md
+docs/PHASE_*_TESTING*.md
+docs/PHASE_*_DOCKER*.md
+docs/PHASE_*_INTEGRATION*.md
+docs/PHASE_*_COMPLETION*.md
+docs/PHASE_*_RESUME.md
+docs/STATUS_SUMMARY.md
+docs/INDEX_DOCUMENTATION.md
+
+# Infrastructure documentation (exclude temporary docs)
+infrastructure/*_VALIDATION.md
+infrastructure/*_NOTES.md
+infrastructure/TEST_RESULTS.md
+infrastructure/TESTING.md
+infrastructure/TROUBLESHOOTING.md
+
+# Scripts documentation (exclude explanatory docs)
+scripts/README_OPCUA_SETUP.md
+
+# Data mining documentation (exclude explanatory docs)
+data-mining/knime-workflows/*.md
+
+# Keep essential README files
+!README.md
+!docs/README.md
+!services/*/README.md
+!infrastructure/README.md
+!scripts/README.md
+!data-mining/README.md
+!deploy/README.md
+!ml_pipeline/README.md
