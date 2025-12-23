@@ -291,12 +291,47 @@ scripts/README_OPCUA_SETUP.md
 # Data mining documentation (exclude explanatory docs)
 data-mining/knime-workflows/*.md
 
+# Folders to exclude completely
+deploy/
+tests-e2e/
+tests/
+migration-backup/
+data-mining/
+
+# Root level shell scripts (not needed for supervisor)
+docker-start.sh
+docker-start.ps1
+
+# PowerShell scripts (Windows-specific, not needed)
+*.ps1
+!scripts/init-kafka-topics.ps1
+!scripts/init-minio-buckets.ps1
+
+# Shell scripts (except essential init scripts)
+*.sh
+!scripts/init-kafka-topics.sh
+!scripts/init-minio-buckets.sh
+
+# Development scripts in scripts folder (not needed for supervisor)
+scripts/opcua_server_simulator.py
+scripts/start_opcua_simulator.*
+scripts/test_*.py
+scripts/train_*.py
+scripts/retrain_*.py
+scripts/check_*.py
+scripts/quick-test-*.ps1
+scripts/pull-images-*.ps1
+scripts/start-*.ps1
+scripts/start-infrastructure.sh
+scripts/validate-*.ps1
+
+# Service development scripts
+services/**/*.ps1
+services/**/test_*.ps1
+
 # Keep essential README files
 !README.md
-!docs/README.md
 !services/*/README.md
 !infrastructure/README.md
 !scripts/README.md
-!data-mining/README.md
-!deploy/README.md
 !ml_pipeline/README.md
