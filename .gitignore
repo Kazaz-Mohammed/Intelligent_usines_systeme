@@ -327,7 +327,41 @@ scripts/validate-*.ps1
 
 # Service development scripts
 services/**/*.ps1
+services/**/*.bat
 services/**/test_*.ps1
+services/**/test_*.py
+services/**/install_*.bat
+services/**/start_*.bat
+services/**/start_worker.bat
+services/**/start_worker.py
+
+# Service phase documentation (development docs)
+services/**/PHASE_*.md
+services/**/TEST_*.md
+services/**/TEST_SUMMARY.md
+services/**/TEST_RESULTS_*.md
+services/**/RESULTS_*.md
+services/**/FIX_*.md
+services/**/QUICK_*.md
+services/**/HOW_TO_*.md
+services/**/README_DOCKER*.md
+services/**/SOLUTION_*.md
+services/**/TROUBLESHOOTING*.md
+services/**/TRANSFER_LEARNING*.md
+services/**/CALIBRATION*.md
+services/**/ARCHITECTURE.md
+services/**/USER_GUIDE.md
+services/**/WORKER_*.md
+services/**/MLFLOW_*.md
+services/**/POSTGRESQL_*.md
+services/**/DOCKER_*.md
+services/**/KAFKA_*.md
+
+# Old frontend folder (replaced by predictive-maintenance-dashboard)
+services/dashboard-usine/frontend/
+
+# ml-models folder (replaced by ml_pipeline)
+ml-models/
 
 # Keep essential README files
 !README.md
