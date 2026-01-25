@@ -10,6 +10,18 @@ Cette plateforme combine **3 modules académiques** en une solution complète :
 2. **Data Mining** : Analyse exploratoire avec KNIME Analytics Platform
 3. **Architecture Microservices** : Système distribué avec Spring Boot, FastAPI, Docker, Kubernetes
 
+## 🎥 Démonstration Vidéo
+
+Regardez la démonstration complète de l'application :
+
+👉 **[Voir la vidéo de démonstration](video/demonstrationVideo.mp4)**
+
+La vidéo montre le fonctionnement complet de la plateforme, incluant :
+- L'interface du dashboard
+- Les fonctionnalités de détection d'anomalies
+- Les prédictions RUL en temps réel
+- L'orchestration des services
+
 ## 🏗️ Architecture du Système
 
 ### Flux de Données
@@ -145,6 +157,8 @@ usines_intelligentes/
 │   └── saved_models/            # Modèles entraînés
 ├── data-mining/                 # Workflows KNIME
 ├── datasets/                    # Dataset NASA C-MAPSS
+├── video/                       # Vidéo de démonstration
+│   └── demonstrationVideo.mp4
 ├── infrastructure/              # Configuration K8s, scripts
 ├── scripts/                     # Scripts utilitaires
 ├── docs/                        # Documentation technique
