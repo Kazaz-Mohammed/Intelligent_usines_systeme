@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Kazaz"
+  given-names: "Mohammed"
+title: "Plateforme de Maintenance Prédictive pour Usines Intelligentes"
+version: 1.0.0
+doi: "" # Zenodo will provide this after the first release
+date-released: 2026-04-22
+url: "https://github.com/Kazaz-Mohammed/Intelligent_usines_systeme"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Kazaz"
+    given-names: "Mohammed"
+  title: "Predictive Maintenance Platform for Smart Factories"
+  journal: "SoftwareX"
+  year: 2026
