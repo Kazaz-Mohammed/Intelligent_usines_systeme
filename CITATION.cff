@@ -5,7 +5,7 @@ authors:
   given-names: "Mohammed"
 title: "Plateforme de Maintenance Prédictive pour Usines Intelligentes"
 version: 1.0.0
-doi: "" # Zenodo will provide this after the first release
+doi: "10.5281/zenodo.19700850"
 date-released: 2026-04-22
 url: "https://github.com/Kazaz-Mohammed/Intelligent_usines_systeme"
 preferred-citation:
